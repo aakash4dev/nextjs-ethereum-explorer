@@ -1,103 +1,154 @@
-import Image from "next/image";
+"use client";
+import Link from "next/link";
+import { useEffect, useState } from "react";
+
+const formatNumber = (num) => new Intl.NumberFormat("en-US").format(num);
+const truncateHash = (hash, start = 6, end = 4) => hash ? `${hash.substring(0, start)}...${hash.substring(hash.length - end)}` : "";
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.js
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [data, setData] = useState({ blocks: [], transactions: [] });
+  const [isLoading, setIsLoading] = useState(true);
+  const [isIndexing, setIsIndexing] = useState(false);
+  const [message, setMessage] = useState("");
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+  const fetchData = async () => {
+    setIsLoading(true);
+    try {
+      console.log('Fetching data from /api/data...');
+      const res = await fetch("/api/data");
+      console.log('Response status:', res.status);
+      
+      const fetchedData = await res.json();
+      console.log('Fetched data:', fetchedData);
+      
+      if (res.ok) {
+        setData(fetchedData);
+        console.log('Data set successfully:', fetchedData);
+      } else {
+        setMessage(`Error fetching data: ${fetchedData.message}`);
+        console.error('API error:', fetchedData);
+      }
+    } catch (error) {
+      setMessage(`Error fetching data: ${error.message}`);
+      console.error('Fetch error:', error);
+    }
+    setIsLoading(false);
+  };
+
+  const runIndexer = async () => {
+    setIsIndexing(true);
+    setMessage("Indexer running... this may take a moment.");
+    try {
+      console.log('Starting indexer...');
+      const res = await fetch("/api/indexer", { method: "POST" });
+      const result = await res.json();
+      console.log('Indexer result:', result);
+      setMessage(result.message || 'Indexer run complete.');
+      await fetchData(); // Refresh data after indexing
+    } catch (error) {
+      setMessage(`Indexer failed: ${error.message}`);
+      console.error('Indexer error:', error);
+    }
+    setIsIndexing(false);
+  };
+
+  useEffect(() => { 
+    console.log('Component mounted, fetching initial data...');
+    fetchData(); 
+  }, []);
+
+  return (
+    <div className="bg-gray-900 text-white min-h-screen font-sans">
+      <main className="container mx-auto p-4 md:p-8">
+        <header className="text-center mb-8 md:mb-12">
+          <h1 className="text-4xl md:text-5xl font-bold text-cyan-400">Ethereum Indexer MVP</h1>
+          <p className="text-gray-400 mt-2">A simple block explorer powered by Next.js, MongoDB, and Web3.js</p>
+        </header>
+        <div className="text-center mb-8">
+          <button
+            onClick={runIndexer}
+            disabled={isIndexing}
+            className="bg-cyan-500 hover:bg-cyan-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold py-3 px-6 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 shadow-lg shadow-cyan-500/30"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+            {isIndexing ? "Indexing..." : "Run Indexer (Fetch Latest 100 Blocks)"}
+          </button>
+          {message && <p className="mt-4 text-sm text-gray-300">{message}</p>}
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Latest Blocks Section */}
+          <div className="bg-gray-800/50 backdrop-blur-sm p-6 rounded-xl shadow-2xl border border-gray-700">
+            <h2 className="text-2xl font-semibold mb-4 text-cyan-300">Latest Blocks ({data.blocks?.length || 0})</h2>
+            <div className="overflow-x-auto">
+              {isLoading ? <p>Loading blocks...</p> : (
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="border-b border-gray-600">
+                      <th className="p-2">Block</th>
+                      <th className="p-2">Miner</th>
+                      <th className="p-2 text-right">Txs</th>
+                      <th className="p-2 text-right">Gas Used</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.blocks && data.blocks.length > 0 ? (
+                      data.blocks.map(block => (
+                        <tr key={block.hash} className="border-b border-gray-700 hover:bg-gray-700/50 transition-colors">
+                          <td className="p-3 text-cyan-400 font-mono">
+                            <Link href={`/block/${block.number}`}>{formatNumber(block.number)}</Link>
+                          </td>
+                          <td className="p-3 font-mono text-purple-400">{truncateHash(block.miner)}</td>
+                          <td className="p-3 text-right">{block.transactionCount}</td>
+                          <td className="p-3 text-right">{formatNumber(block.gasUsed)}</td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan="4" className="p-3 text-center text-gray-400">No blocks found. Run the indexer first.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
+          {/* Latest Transactions Section */}
+          <div className="bg-gray-800/50 backdrop-blur-sm p-6 rounded-xl shadow-2xl border border-gray-700">
+            <h2 className="text-2xl font-semibold mb-4 text-cyan-300">Latest Transactions ({data.transactions?.length || 0})</h2>
+            <div className="overflow-x-auto">
+              {isLoading ? <p>Loading transactions...</p> : (
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="border-b border-gray-600">
+                      <th className="p-2">Hash</th>
+                      <th className="p-2">From</th>
+                      <th className="p-2">To</th>
+                      <th className="p-2 text-right">Value (ETH)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.transactions && data.transactions.length > 0 ? (
+                      data.transactions.map(tx => (
+                        <tr key={tx.hash} className="border-b border-gray-700 hover:bg-gray-700/50 transition-colors">
+                          <td className="p-3 font-mono text-cyan-400">
+                            <Link href={`/transaction/${tx.hash}`}>{truncateHash(tx.hash)}</Link>
+                          </td>
+                          <td className="p-3 font-mono text-purple-400">{truncateHash(tx.from)}</td>
+                          <td className="p-3 font-mono text-purple-400">{truncateHash(tx.to)}</td>
+                          <td className="p-3 text-right">{(Number(tx.value) / 1e18).toFixed(4)}</td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan="4" className="p-3 text-center text-gray-400">No transactions found. Run the indexer first.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
         </div>
       </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
     </div>
   );
 }
