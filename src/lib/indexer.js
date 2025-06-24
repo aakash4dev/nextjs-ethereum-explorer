@@ -11,7 +11,7 @@ export async function runIndexer() {
     const latestBlockNumber = await web3.eth.getBlockNumber();
     console.log(`Latest block number: ${latestBlockNumber}`);
     
-    const blocksToIndex = 100;
+    const blocksToIndex = 10;
     let indexedCount = 0;
     
     for (let i = 0; i < blocksToIndex; i++) {

@@ -1,16 +1,18 @@
 # Ethereum Indexer MVP
 
-A simple Ethereum block explorer built with Next.js (App Router), MongoDB, and Web3.js. Indexes the latest 100 blocks and their transactions from the Ethereum blockchain and displays them in a modern web UI.
+A simple Ethereum block explorer built with Next.js (App Router), MongoDB, and Web3.js. It automatically clears and indexes the latest 10 blocks on page load, with live UI updates.
 
 ---
 
 ## Features
-- Indexes the latest 100 Ethereum blocks and their transactions
-- Stores data in MongoDB (local or Atlas)
-- Modern Next.js frontend (App Router, Tailwind CSS)
-- View latest blocks and transactions
-- View block and transaction details
-- Uses the free [publicnode Ethereum RPC](https://ethereum-rpc.publicnode.com)
+- **Automated Indexing:** Clears and indexes the latest 10 Ethereum blocks on initial page load.
+- **Live UI Updates:** Data tables update in near real-time as the indexer runs.
+- **Manual Sync:** A "Sync" button with an icon allows for manual re-indexing.
+- **No Popups:** User feedback is handled through loading states and console logs instead of popups.
+- **Modern Frontend:** Built with Next.js App Router and Tailwind CSS.
+- **Detailed Views:** Pages for individual block and transaction details.
+- **Branded Footer:** A consistent footer with your profile and social media links on all pages.
+- **Reliable RPC:** Uses the free [publicnode Ethereum RPC](https://ethereum-rpc.publicnode.com).
 
 ---
 
@@ -33,6 +35,7 @@ cd ethereum-indexer
 ### 2. Install Dependencies
 ```sh
 npm install
+npm install react-icons
 ```
 
 ### 3. Set Up Environment Variables
@@ -60,13 +63,9 @@ mongod
 ```sh
 npm run dev
 ```
-- The app will be available at [http://localhost:3000](http://localhost:3000)
-
-### 3. Index Ethereum Data
-- Open [http://localhost:3000](http://localhost:3000) in your browser
-- Click the **"Run Indexer"** button at the top
-- This will fetch and store the latest 100 blocks and their transactions
-- The frontend will update automatically with the new data
+- The app will be available at [http://localhost:3000](http://localhost:3000).
+- The app will automatically start syncing the latest 10 blocks. You will see them appear in the UI one by one.
+- You can click the **"Sync" button** at any time to re-run the process.
 
 ---
 
@@ -77,10 +76,10 @@ npm run dev
 - All large numeric fields (like `gasUsed`, `gasPrice`, `value`) are stored as strings. Use `.toString()` before saving.
 
 ### No Data in Frontend
-- Make sure MongoDB is running and accessible
-- Check your `.env.local` values
-- Check the browser console and server logs for errors
-- Run the indexer again if needed
+- Make sure MongoDB is running and accessible.
+- Check your `.env.local` values.
+- Check the browser console and server logs for errors.
+- Click the "Sync" button to re-run the indexer.
 
 ---
 
@@ -90,7 +89,7 @@ npm run dev
 ethereum-indexer/
 ├── src/
 │   ├── app/
-│   │   ├── api/           # API routes (blocks, transactions, indexer, etc)
+│   │   ├── api/           # API routes (data, indexer, clear)
 │   │   ├── block/         # Block detail pages
 │   │   ├── transaction/   # Transaction detail pages
 │   │   └── page.js        # Main explorer page
@@ -106,9 +105,20 @@ ethereum-indexer/
 ---
 
 ## Customization
-- You can change the number of blocks indexed by editing `blocksToIndex` in `src/lib/indexer.js`
-- To use a different Ethereum RPC, update `ETHEREUM_RPC_URL` in your `.env.local`
-- To use MongoDB Atlas, update `MONGODB_URI` in your `.env.local`
+- You can change the number of blocks indexed by editing `blocksToIndex` in `src/lib/indexer.js`.
+- To use a different Ethereum RPC, update `ETHEREUM_RPC_URL` in your `.env.local`.
+- To use MongoDB Atlas, update `MONGODB_URI` in your `.env.local`.
+
+---
+
+## Footer & Social Links
+This project includes a footer with your details and social media links:
+- [Profile](https://www.aakash4dev.com)
+- [GitHub](https://github.com/aakash4dev)
+- [LinkedIn](https://linkedin.com/in/aakash4dev)
+- [Twitter](https://twitter.com/aakash4dev)
+- [YouTube](https://www.youtube.com/@aakash4dev)
+- [Medium](https://medium.com/@aakash4dev)
 
 ---
 
