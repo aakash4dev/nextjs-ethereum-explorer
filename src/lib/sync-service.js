@@ -5,12 +5,14 @@
  * Run this as a separate process or use a process manager like PM2.
  * 
  * Usage:
- *   node src/lib/sync-service.js
+ *   npm run sync
  * 
  * Or with PM2:
  *   pm2 start src/lib/sync-service.js --name ethereum-indexer
  */
 
+// Environment variables are loaded by the wrapper script (scripts/sync.js)
+// This file assumes env vars are already loaded
 import { startContinuousSync } from './indexer.js';
 import dbConnect from './mongodb.js';
 

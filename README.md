@@ -45,8 +45,8 @@ A comprehensive, production-ready Ethereum blockchain explorer built with Next.j
 ## 📋 Prerequisites
 
 - **Node.js** (v18 or higher)
-- **MongoDB** (local installation or MongoDB Atlas account)
-- **Ethereum RPC Endpoint** (public or private node)
+- **MongoDB** (local installation recommended for development)
+- **Ethereum RPC Endpoint** (public RPC or your own node)
 
 ---
 
@@ -67,17 +67,24 @@ npm install
 
 ### 3. Configure Environment Variables
 
-Create a `.env.local` file in the project root:
+Create a `.env.local` file in the project root (copy from `.example.env`):
+
+```bash
+cp .example.env .env.local
+```
+
+Edit `.env.local` with your configuration:
 
 ```env
-# Ethereum RPC URL
+# Ethereum RPC URL (public endpoint for local testing)
 ETHEREUM_RPC_URL=https://ethereum-rpc.publicnode.com
 
-# MongoDB Connection String
+# MongoDB Connection String (LOCAL MongoDB)
 MONGODB_URI=mongodb://localhost:27017/ethereum_indexer
 
 # Indexer Configuration
-START_BLOCK=0                    # Block number to start indexing from (0 = genesis)
+START_BLOCK=23756000             # Start from recent block (faster than genesis)
+                                 # Set to 0 to start from genesis (very slow)
 INDEXER_BATCH_SIZE=10            # Number of blocks to process per sync cycle
 SYNC_INTERVAL=5000               # Sync interval in milliseconds (for background service)
 
@@ -85,29 +92,16 @@ SYNC_INTERVAL=5000               # Sync interval in milliseconds (for background
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
 ```
 
-**For Production:**
-- Use a reliable RPC endpoint (Infura, Alchemy, or your own node)
-- Use MongoDB Atlas or a managed MongoDB instance
-- Set appropriate batch sizes based on your RPC rate limits
+**Important Notes:**
+- **For Local Development**: Use `mongodb://localhost:27017/ethereum_indexer`
+- **START_BLOCK**: Set to a recent block number (e.g., 23756000) for faster initial sync
+- **RPC Endpoint**: Public endpoints have rate limits; consider using Infura/Alchemy for production
 
-### 4. Setup MongoDB
+### 4. Setup Local MongoDB
 
-You have two options:
+**For Local Development (Recommended):**
 
-#### Option A: MongoDB Atlas (Recommended - Cloud, Free Tier Available)
-
-1. Sign up at [MongoDB Atlas](https://www.mongodb.com/cloud/atlas/register)
-2. Create a free cluster (M0 tier)
-3. Create a database user
-4. Whitelist your IP address (or use `0.0.0.0/0` for development)
-5. Get your connection string and update `.env.local`:
-```env
-   MONGODB_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/ethereum_indexer?retryWrites=true&w=majority
-```
-
-#### Option B: Local MongoDB Installation
-
-**For Ubuntu/Debian:**
+#### Ubuntu/Debian:
 ```bash
 # Import MongoDB public GPG key
 curl -fsSL https://www.mongodb.org/static/pgp/server-7.0.asc | sudo gpg -o /usr/share/keyrings/mongodb-server-7.0.gpg --dearmor
@@ -127,56 +121,213 @@ sudo systemctl enable mongod  # Enable auto-start on boot
 sudo systemctl status mongod
 ```
 
-**For other Linux distributions**, see [MongoDB Installation Guide](https://www.mongodb.com/docs/manual/installation/)
-
-**For macOS:**
+#### macOS:
 ```bash
 brew tap mongodb/brew
 brew install mongodb-community
 brew services start mongodb-community
 ```
 
-**For Windows:**
+#### Windows:
 Download and install from [MongoDB Download Center](https://www.mongodb.com/try/download/community)
 
-### 5. Run the Application
+#### Verify MongoDB is Running:
+```bash
+# Test connection
+mongosh mongodb://localhost:27017/ethereum_indexer --eval "db.stats()"
+```
 
-**Development Mode:**
+**Alternative: MongoDB Atlas (Cloud)**
+If you prefer cloud MongoDB, see the [MongoDB Atlas setup guide](https://www.mongodb.com/cloud/atlas/register) and update `MONGODB_URI` in `.env.local`
+
+### 5. Run the Application Locally
+
+**Step 1: Start the Frontend (Terminal 1)**
 ```bash
 npm run dev
 ```
 
-**Production Mode:**
+Wait for: `Ready on http://localhost:3000`
+
+**Step 2: Start the Background Indexer (Terminal 2)**
 ```bash
-npm run build
-npm start
+npm run sync
+```
+
+This will continuously sync blocks in the background.
+
+**Alternative: Manual Sync via Web Interface**
+- Visit http://localhost:3000
+- The page will auto-trigger a sync on load
+- Or use the API: `curl -X POST http://localhost:3000/api/indexer`
+
+**Verify Everything is Working:**
+```bash
+# Check sync status
+curl http://localhost:3000/api/indexer
+
+# Check database stats
+curl http://localhost:3000/api/stats
+
+# View latest blocks
+curl "http://localhost:3000/api/data?limit=5"
 ```
 
 The application will be available at [http://localhost:3000](http://localhost:3000).
 
 ---
 
-## 🔄 Background Sync Service
+## 🔄 Background Sync Service (Local Development)
 
-For production deployments, run the background sync service to continuously index new blocks:
+For continuous syncing in local development, run the background sync service:
 
+**Terminal 1: Frontend**
+```bash
+npm run dev
+```
+
+**Terminal 2: Background Indexer**
 ```bash
 npm run sync
 ```
 
-Or use a process manager like PM2:
+The sync service will:
+- Continuously monitor for new blocks
+- Process blocks in batches (configured by `INDEXER_BATCH_SIZE`)
+- Handle errors gracefully with retry logic
+- Update sync status in the database
+- Log progress to console
 
+**Monitor Sync Progress:**
+```bash
+# Check sync status
+curl http://localhost:3000/api/indexer | python3 -m json.tool
+
+# Watch sync in real-time
+watch -n 2 'curl -s http://localhost:3000/api/indexer | python3 -m json.tool'
+```
+
+**For Production (PM2):**
 ```bash
 pm2 start src/lib/sync-service.js --name ethereum-indexer
+pm2 logs ethereum-indexer
 pm2 save
 pm2 startup
 ```
 
-The sync service will:
-- Continuously monitor for new blocks
-- Process blocks in batches
-- Handle errors gracefully with retry logic
-- Update sync status in the database
+---
+
+## ✅ Verifying Sync is Working
+
+### Quick Verification Commands
+
+**1. Check Sync Status:**
+```bash
+curl http://localhost:3000/api/indexer | python3 -m json.tool
+```
+
+Look for:
+- `isSyncing`: `true` when actively syncing
+- `lastProcessedBlock`: Should increase over time
+- `totalBlocksIndexed`: Should increase
+- `totalTransactionsIndexed`: Should increase
+
+**2. Check Database Statistics:**
+```bash
+curl http://localhost:3000/api/stats | python3 -m json.tool
+```
+
+Check:
+- `overview.totalBlocks`: Number of blocks in database
+- `overview.totalTransactions`: Number of transactions
+- `indexer.lastProcessedBlock`: Last block processed
+
+**3. View Latest Indexed Blocks:**
+```bash
+curl "http://localhost:3000/api/data?limit=5" | python3 -m json.tool
+```
+
+Should show blocks if syncing is working.
+
+**4. Check MongoDB Directly:**
+```bash
+mongosh mongodb://localhost:27017/ethereum_indexer
+```
+
+Then run:
+```javascript
+// Check indexer state
+db.indexerstates.findOne({ key: "sync_state" })
+
+// Count blocks
+db.blocks.countDocuments()
+
+// Count transactions
+db.transactions.countDocuments()
+
+// View latest blocks
+db.blocks.find().sort({ number: -1 }).limit(5).pretty()
+```
+
+**5. Watch Sync Progress in Real-Time:**
+```bash
+# Watch sync status every 2 seconds
+watch -n 2 'curl -s http://localhost:3000/api/indexer | python3 -m json.tool'
+```
+
+**6. Check Sync Service Logs:**
+Look at the terminal where `npm run sync` is running. You should see:
+- `"Syncing from block X to Y"`
+- `"Block X saved with N transactions"`
+- `"Indexing complete. Indexed N blocks..."`
+
+### Expected Behavior
+
+**When Sync is Working:**
+- Terminal shows: `"Syncing from block X to Y"`
+- `lastProcessedBlock` increases
+- Blocks appear in database
+- API returns blocks and transactions
+- Database counts increase
+
+**When Sync is NOT Working:**
+- `"Indexer is already running"` (stuck state - see troubleshooting)
+- No new blocks being processed
+- `lastProcessedBlock` doesn't change
+- Database count stays the same
+
+---
+
+## 🛑 How to Stop Sync
+
+### Method 1: Stop the Sync Service (Recommended)
+In the terminal where `npm run sync` is running:
+- Press `Ctrl+C` to stop gracefully
+
+### Method 2: Kill the Process
+```bash
+# Find the process
+ps aux | grep "sync.js"
+
+# Kill it (replace PID with actual process ID)
+kill <PID>
+
+# Or kill all sync processes
+pkill -f "sync.js"
+```
+
+### Method 3: Reset Indexer State (if stuck)
+```bash
+mongosh mongodb://localhost:27017/ethereum_indexer --eval "db.indexerstates.updateOne({ key: 'sync_state' }, { \$set: { isSyncing: false } })"
+```
+
+Or via MongoDB shell:
+```javascript
+db.indexerstates.updateOne(
+  { key: "sync_state" },
+  { $set: { isSyncing: false } }
+)
+```
 
 ---
 
@@ -234,14 +385,22 @@ The sync service will:
 
 ---
 
-## 🎯 Usage Examples
+## 🎯 Local Development Usage
 
 ### Starting from a Specific Block
 
-To start indexing from block 18,000,000:
+**Important**: Starting from block 0 (genesis) will take a very long time. For local testing, use a recent block:
 
 ```env
-START_BLOCK=18000000
+# In .env.local
+START_BLOCK=23756000  # Recent block (faster sync)
+```
+
+To find the current Ethereum block:
+```bash
+curl -X POST -H "Content-Type: application/json" \
+  --data '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}' \
+  https://ethereum-rpc.publicnode.com
 ```
 
 ### Adjusting Batch Size
@@ -249,13 +408,26 @@ START_BLOCK=18000000
 For faster syncing (if your RPC allows):
 
 ```env
-INDEXER_BATCH_SIZE=50
+INDEXER_BATCH_SIZE=20  # Process more blocks per cycle
+```
+
+### Checking Sync Status Locally
+
+```bash
+# Quick status check
+curl http://localhost:3000/api/indexer
+
+# Detailed stats
+curl http://localhost:3000/api/stats | python3 -m json.tool
+
+# View indexed blocks
+curl "http://localhost:3000/api/data?limit=10" | python3 -m json.tool
 ```
 
 ### Filtering Transactions by Address
 
-```
-GET /api/transactions?address=0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb
+```bash
+curl "http://localhost:3000/api/transactions?address=0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"
 ```
 
 ---
@@ -293,24 +465,143 @@ The application creates indexes on:
 
 ---
 
-## 🐛 Troubleshooting
+## 🐛 Troubleshooting (Local Development)
 
 ### Indexer Not Syncing
-- Check RPC endpoint is accessible
-- Verify MongoDB connection
-- Check `START_BLOCK` configuration
-- Review error logs in the database indexer state
+```bash
+# 1. Check if MongoDB is running
+sudo systemctl status mongod  # Linux
+brew services list | grep mongodb  # macOS
+
+# 2. Test MongoDB connection
+mongosh mongodb://localhost:27017/ethereum_indexer --eval "db.stats()"
+
+# 3. Check RPC endpoint
+curl -X POST -H "Content-Type: application/json" \
+  --data '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}' \
+  https://ethereum-rpc.publicnode.com
+
+# 4. Check sync status
+curl http://localhost:3000/api/indexer
+
+# 5. Check server logs (Terminal 1 where npm run dev is running)
+```
+
+### Sync Service Error: "Cannot find package '@/lib'"
+**Fixed!** The issue was resolved by:
+- Adding `"type": "module"` to `package.json`
+- Changing import in `indexer.js` to use relative path `./mongodb.js`
+- Adding `dotenv` package for environment variable loading
+- Creating wrapper script `scripts/sync.js` to load env vars first
+
+If you still see this error:
+```bash
+npm install  # Reinstall dependencies
+npm run sync  # Try again
+```
+
+### Error: "Cast to Number failed for value '537n' (type bigint)"
+**Fixed!** This happens when Web3.js returns BigInt values. The indexer now converts BigInt to Number automatically.
+
+If you still see this error:
+```bash
+# Make sure you have the latest code
+git pull  # If using git
+npm install  # Reinstall dependencies
+npm run sync  # Restart sync
+```
+
+### "Indexer is already running" (Stuck State)
+The indexer state is stuck. Reset it:
+
+```bash
+# Reset the stuck state
+mongosh mongodb://localhost:27017/ethereum_indexer --eval "db.indexerstates.updateOne({ key: 'sync_state' }, { \$set: { isSyncing: false } })"
+
+# Then restart sync
+npm run sync
+```
+
+Or complete reset:
+```bash
+mongosh mongodb://localhost:27017/ethereum_indexer --eval "db.indexerstates.updateOne({ key: 'sync_state' }, { \$set: { lastProcessedBlock: -1, isSyncing: false } })"
+```
 
 ### Slow Performance
-- Reduce `INDEXER_BATCH_SIZE`
-- Increase `SYNC_INTERVAL`
-- Optimize MongoDB indexes
-- Use a faster RPC endpoint
+- Reduce `INDEXER_BATCH_SIZE` to 5-10 for public RPCs
+- Increase `SYNC_INTERVAL` to 10000 (10 seconds)
+- Use a dedicated RPC endpoint (Infura, Alchemy)
+- Check MongoDB is running locally and not on network
 
 ### Missing Data
-- Ensure indexer has processed the required blocks
-- Check sync status via `/api/indexer`
-- Verify block range in database
+```bash
+# Check what's in the database
+mongosh mongodb://localhost:27017/ethereum_indexer
+
+# Then run:
+db.blocks.countDocuments()
+db.transactions.countDocuments()
+db.indexerstates.findOne({ key: "sync_state" })
+
+# If needed, reset indexer state:
+db.indexerstates.updateOne(
+  { key: "sync_state" },
+  { $set: { lastProcessedBlock: -1, isSyncing: false } }
+)
+```
+
+### MongoDB Connection Issues
+```bash
+# Check if MongoDB is running
+sudo systemctl status mongod
+
+# Start MongoDB if not running
+sudo systemctl start mongod
+
+# Check MongoDB logs
+sudo tail -f /var/log/mongodb/mongod.log
+```
+
+### Reset Database (Fresh Start)
+
+**Option 1: Using NPM Script (Recommended)**
+```bash
+# Stop sync service first (Ctrl+C)
+npm run reset-db
+```
+
+**Option 2: Using MongoDB Shell**
+```bash
+# Delete all collections
+mongosh mongodb://localhost:27017/ethereum_indexer --eval "
+  db.blocks.deleteMany({});
+  db.transactions.deleteMany({});
+  db.addresses.deleteMany({});
+  db.indexerstates.deleteMany({});
+  print('✅ All data deleted');
+"
+
+# Reset indexer state to start from START_BLOCK
+mongosh mongodb://localhost:27017/ethereum_indexer --eval "
+  db.indexerstates.updateOne(
+    { key: 'sync_state' },
+    { \$set: { lastProcessedBlock: 14, isSyncing: false, totalBlocksIndexed: 0, totalTransactionsIndexed: 0 } }
+  );
+  print('✅ Indexer state reset');
+"
+```
+
+**Option 3: Drop Entire Database**
+```bash
+# WARNING: This deletes the entire database
+mongosh mongodb://localhost:27017/ethereum_indexer --eval "db.dropDatabase()"
+```
+
+**After Reset:**
+```bash
+# Restart sync service
+npm run sync
+```
 
 ---
 

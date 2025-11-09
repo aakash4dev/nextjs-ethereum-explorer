@@ -1,5 +1,5 @@
 import Web3 from 'web3';
-import dbConnect, { Block, Transaction, Address, IndexerState } from '@/lib/mongodb';
+import dbConnect, { Block, Transaction, Address, IndexerState } from './mongodb.js';
 
 const web3 = new Web3(process.env.ETHEREUM_RPC_URL);
 const BATCH_SIZE = parseInt(process.env.INDEXER_BATCH_SIZE || '10', 10);
@@ -78,7 +78,7 @@ async function processBlock(blockNumber) {
       extraData: block.extraData,
       difficulty: block.difficulty?.toString(),
       totalDifficulty: block.totalDifficulty?.toString(),
-      size: block.size,
+      size: block.size ? (typeof block.size === 'bigint' ? Number(block.size) : Number(block.size)) : null,
       transactionCount: block.transactions.length,
       transactionsRoot: block.transactionsRoot,
       stateRoot: block.stateRoot,

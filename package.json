@@ -2,14 +2,17 @@
   "name": "ethereum-indexer",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "sync": "node src/lib/sync-service.js"
+    "sync": "node scripts/sync.js",
+    "reset-db": "node scripts/reset-database.js --confirm"
   },
   "dependencies": {
+    "dotenv": "^16.4.5",
     "mongoose": "^8.16.0",
     "next": "^15.5.6",
     "react": "^19.0.0",
