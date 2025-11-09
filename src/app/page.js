@@ -148,6 +148,26 @@ export default function Home() {
         </form>
         {searchError && <div className="text-center text-red-400 mb-4">{searchError}</div>}
 
+        {/* Empty Database Warning */}
+        {stats && stats.overview?.totalBlocks === 0 && stats.overview?.totalTransactions === 0 && !isLoading && (
+          <div className="bg-gradient-to-r from-yellow-900/50 to-orange-900/50 border-2 border-yellow-600 rounded-xl p-6 mb-8 shadow-lg">
+            <div className="flex items-center gap-4">
+              <FaSync className="text-4xl text-yellow-400 animate-pulse" />
+              <div className="flex-1">
+                <h3 className="text-xl font-bold text-yellow-300 mb-1">Database is Empty</h3>
+                <p className="text-yellow-200/80 mb-2">
+                  No blocks have been indexed yet. You need to start the sync service from the backend to begin indexing the blockchain.
+                </p>
+                <div className="mt-3 pt-3 border-t border-yellow-700/50">
+                  <p className="text-sm text-yellow-200/70">
+                    <strong>To start syncing:</strong> Run <code className="bg-yellow-900/50 px-2 py-1 rounded font-mono">npm run sync</code> in a separate terminal, or use the background sync service.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Stats Overview */}
         {stats && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
@@ -243,6 +263,16 @@ export default function Home() {
             <div className="overflow-x-auto">
               {(isLoading && data.blocks.length === 0) ? (
                 <div className="text-center py-8 text-gray-400">Loading blocks...</div>
+              ) : stats && stats.overview?.totalBlocks === 0 ? (
+                <div className="text-center py-12">
+                  <FaCube className="text-6xl text-gray-600 mx-auto mb-4" />
+                  <p className="text-gray-400 text-lg mb-2">No blocks indexed yet</p>
+                  <p className="text-gray-500 text-sm">
+                    Start the sync service from the backend to begin indexing blocks.
+                    <br />
+                    <code className="bg-gray-900/50 px-2 py-1 rounded text-xs mt-2 inline-block">npm run sync</code>
+                  </p>
+                </div>
               ) : (
                 <table className="w-full text-left">
                   <thead>
@@ -287,6 +317,16 @@ export default function Home() {
             <div className="overflow-x-auto">
               {(isLoading && data.transactions.length === 0) ? (
                 <div className="text-center py-8 text-gray-400">Loading transactions...</div>
+              ) : stats && stats.overview?.totalTransactions === 0 ? (
+                <div className="text-center py-12">
+                  <FaExchangeAlt className="text-6xl text-gray-600 mx-auto mb-4" />
+                  <p className="text-gray-400 text-lg mb-2">No transactions indexed yet</p>
+                  <p className="text-gray-500 text-sm">
+                    Start the sync service from the backend to begin indexing transactions.
+                    <br />
+                    <code className="bg-gray-900/50 px-2 py-1 rounded text-xs mt-2 inline-block">npm run sync</code>
+                  </p>
+                </div>
               ) : (
                 <table className="w-full text-left">
                   <thead>
