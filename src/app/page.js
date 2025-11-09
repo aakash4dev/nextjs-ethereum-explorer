@@ -15,12 +15,14 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState(null);
+  const [apiError, setApiError] = useState(false);
   const isMounted = useRef(false);
   const [search, setSearch] = useState("");
   const [searchError, setSearchError] = useState("");
 
   const fetchData = async () => {
     try {
+      setApiError(false);
       const [dataRes, statsRes] = await Promise.all([
         fetch("/api/data?limit=10"),
         fetch("/api/stats"),
@@ -29,14 +31,71 @@ export default function Home() {
       if (dataRes.ok) {
         const fetchedData = await dataRes.json();
         setData(fetchedData);
+      } else {
+        setApiError(true);
       }
       
       if (statsRes.ok) {
         const fetchedStats = await statsRes.json();
         setStats(fetchedStats);
+      } else {
+        // If stats API fails, set default empty stats
+        if (!stats) {
+          setStats({
+            overview: {
+              totalBlocks: 0,
+              totalTransactions: 0,
+              totalAddresses: 0,
+              latestBlockNumber: 0,
+            },
+            indexer: {
+              lastProcessedBlock: 0,
+              isSyncing: false,
+              totalBlocksIndexed: 0,
+              totalTransactionsIndexed: 0,
+            },
+            activity: {
+              blocksLast24h: 0,
+              transactionsLast24h: 0,
+            },
+            gas: {
+              avgGasUsed: 0,
+              avgGasLimit: 0,
+              totalGasUsed: 0,
+            },
+          });
+        }
+        setApiError(true);
       }
     } catch (error) {
       console.error("Error fetching data:", error.message);
+      setApiError(true);
+      // Set default empty stats on error
+      if (!stats) {
+        setStats({
+          overview: {
+            totalBlocks: 0,
+            totalTransactions: 0,
+            totalAddresses: 0,
+            latestBlockNumber: 0,
+          },
+          indexer: {
+            lastProcessedBlock: 0,
+            isSyncing: false,
+            totalBlocksIndexed: 0,
+            totalTransactionsIndexed: 0,
+          },
+          activity: {
+            blocksLast24h: 0,
+            transactionsLast24h: 0,
+          },
+          gas: {
+            avgGasUsed: 0,
+            avgGasLimit: 0,
+            totalGasUsed: 0,
+          },
+        });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -48,9 +107,32 @@ export default function Home() {
       if (res.ok) {
         const status = await res.json();
         setSyncStatus(status);
+      } else {
+        // Set default sync status if API fails
+        if (!syncStatus) {
+          setSyncStatus({
+            isSyncing: false,
+            lastProcessedBlock: 0,
+            totalBlocksIndexed: 0,
+            totalTransactionsIndexed: 0,
+            blocksBehind: 0,
+            syncProgress: 0,
+          });
+        }
       }
     } catch (error) {
       console.error("Error fetching sync status:", error.message);
+      // Set default sync status on error
+      if (!syncStatus) {
+        setSyncStatus({
+          isSyncing: false,
+          lastProcessedBlock: 0,
+          totalBlocksIndexed: 0,
+          totalTransactionsIndexed: 0,
+          blocksBehind: 0,
+          syncProgress: 0,
+        });
+      }
     }
   };
 
@@ -149,7 +231,7 @@ export default function Home() {
         {searchError && <div className="text-center text-red-400 mb-4">{searchError}</div>}
 
         {/* Empty Database Warning */}
-        {stats && stats.overview?.totalBlocks === 0 && stats.overview?.totalTransactions === 0 && !isLoading && (
+        {(!stats || (stats.overview?.totalBlocks === 0 && stats.overview?.totalTransactions === 0)) && !isLoading && (
           <div className="bg-gradient-to-r from-yellow-900/50 to-orange-900/50 border-2 border-yellow-600 rounded-xl p-6 mb-8 shadow-lg">
             <div className="flex items-center gap-4">
               <FaSync className="text-4xl text-yellow-400 animate-pulse" />
@@ -158,6 +240,11 @@ export default function Home() {
                 <p className="text-yellow-200/80 mb-2">
                   No blocks have been indexed yet. You need to start the sync service from the backend to begin indexing the blockchain.
                 </p>
+                {apiError && (
+                  <p className="text-yellow-200/70 text-sm mb-2">
+                    ⚠️ Unable to connect to database. Please check your MongoDB connection.
+                  </p>
+                )}
                 <div className="mt-3 pt-3 border-t border-yellow-700/50">
                   <p className="text-sm text-yellow-200/70">
                     <strong>To start syncing:</strong> Run <code className="bg-yellow-900/50 px-2 py-1 rounded font-mono">npm run sync</code> in a separate terminal, or use the background sync service.
@@ -169,13 +256,12 @@ export default function Home() {
         )}
 
         {/* Stats Overview */}
-        {stats && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
             <div className="flex items-center gap-4 bg-gradient-to-br from-gray-800 to-gray-900 p-6 rounded-xl border border-gray-700 shadow-lg hover:shadow-cyan-500/20 transition-shadow">
               <FaCube className="text-4xl text-cyan-400" />
               <div>
                 <div className="text-gray-400 text-sm">Latest Block</div>
-                <div className="text-2xl font-bold text-cyan-200">{stats.overview?.latestBlockNumber ? formatNumber(stats.overview.latestBlockNumber) : "-"}</div>
+                <div className="text-2xl font-bold text-cyan-200">{stats?.overview?.latestBlockNumber ? formatNumber(stats.overview.latestBlockNumber) : "-"}</div>
                 {syncStatus && (
                   <div className="text-xs text-gray-500 mt-1">
                     {syncStatus.blocksBehind > 0 ? `${syncStatus.blocksBehind} behind` : "Synced"}
@@ -187,8 +273,8 @@ export default function Home() {
               <FaExchangeAlt className="text-4xl text-purple-400" />
               <div>
                 <div className="text-gray-400 text-sm">Total Transactions</div>
-                <div className="text-2xl font-bold text-purple-200">{stats.overview?.totalTransactions ? formatNumber(stats.overview.totalTransactions) : "-"}</div>
-                {stats.activity && (
+                <div className="text-2xl font-bold text-purple-200">{stats?.overview?.totalTransactions ? formatNumber(stats.overview.totalTransactions) : "-"}</div>
+                {stats?.activity && (
                   <div className="text-xs text-gray-500 mt-1">
                     {formatNumber(stats.activity.transactionsLast24h)} last 24h
                   </div>
@@ -199,8 +285,8 @@ export default function Home() {
               <SiBlockchaindotcom className="text-4xl text-green-400" />
               <div>
                 <div className="text-gray-400 text-sm">Indexed Blocks</div>
-                <div className="text-2xl font-bold text-green-200">{stats.overview?.totalBlocks ? formatNumber(stats.overview.totalBlocks) : "-"}</div>
-                {stats.activity && (
+                <div className="text-2xl font-bold text-green-200">{stats?.overview?.totalBlocks ? formatNumber(stats.overview.totalBlocks) : "-"}</div>
+                {stats?.activity && (
                   <div className="text-xs text-gray-500 mt-1">
                     {formatNumber(stats.activity.blocksLast24h)} last 24h
                   </div>
@@ -220,17 +306,15 @@ export default function Home() {
               </div>
             </div>
           </div>
-        )}
 
         {/* Additional Stats */}
-        {stats && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
             <div className="bg-gray-800/70 p-5 rounded-xl border border-gray-700">
               <div className="flex items-center gap-2 mb-2">
                 <FaUsers className="text-cyan-400" />
                 <div className="text-gray-400 text-sm">Total Addresses</div>
               </div>
-              <div className="text-xl font-bold text-cyan-200">{stats.overview?.totalAddresses ? formatNumber(stats.overview.totalAddresses) : "-"}</div>
+              <div className="text-xl font-bold text-cyan-200">{stats?.overview?.totalAddresses ? formatNumber(stats.overview.totalAddresses) : "-"}</div>
             </div>
             <div className="bg-gray-800/70 p-5 rounded-xl border border-gray-700">
               <div className="flex items-center gap-2 mb-2">
@@ -238,7 +322,7 @@ export default function Home() {
                 <div className="text-gray-400 text-sm">Avg Gas Used</div>
               </div>
               <div className="text-xl font-bold text-purple-200">
-                {stats.gas?.avgGasUsed ? formatNumber(Math.round(stats.gas.avgGasUsed)) : "-"}
+                {stats?.gas?.avgGasUsed ? formatNumber(Math.round(stats.gas.avgGasUsed)) : "-"}
               </div>
             </div>
             <div className="bg-gray-800/70 p-5 rounded-xl border border-gray-700">
@@ -251,7 +335,6 @@ export default function Home() {
               </div>
             </div>
           </div>
-        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Latest Blocks Section */}
@@ -263,7 +346,7 @@ export default function Home() {
             <div className="overflow-x-auto">
               {(isLoading && data.blocks.length === 0) ? (
                 <div className="text-center py-8 text-gray-400">Loading blocks...</div>
-              ) : stats && stats.overview?.totalBlocks === 0 ? (
+              ) : (!stats || stats.overview?.totalBlocks === 0) ? (
                 <div className="text-center py-12">
                   <FaCube className="text-6xl text-gray-600 mx-auto mb-4" />
                   <p className="text-gray-400 text-lg mb-2">No blocks indexed yet</p>
@@ -317,7 +400,7 @@ export default function Home() {
             <div className="overflow-x-auto">
               {(isLoading && data.transactions.length === 0) ? (
                 <div className="text-center py-8 text-gray-400">Loading transactions...</div>
-              ) : stats && stats.overview?.totalTransactions === 0 ? (
+              ) : (!stats || stats.overview?.totalTransactions === 0) ? (
                 <div className="text-center py-12">
                   <FaExchangeAlt className="text-6xl text-gray-600 mx-auto mb-4" />
                   <p className="text-gray-400 text-lg mb-2">No transactions indexed yet</p>
