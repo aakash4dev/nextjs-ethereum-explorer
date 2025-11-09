@@ -1,20 +1,28 @@
-import { runIndexer } from '../../../lib/indexer';
+import { runIndexer, getSyncStatus } from '../../../lib/indexer';
+import { NextResponse } from 'next/server';
 
 export async function POST() {
   try {
     const result = await runIndexer();
-    return new Response(JSON.stringify(result), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return NextResponse.json(result, { status: 200 });
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    console.error('Indexer API error:', error);
+    return NextResponse.json(
+      { error: error.message || 'Internal server error' },
+      { status: 500 }
+    );
   }
 }
 
-export function GET() {
-  return new Response(JSON.stringify({ message: 'Method Not Allowed' }), { status: 405 });
-} 
+export async function GET() {
+  try {
+    const status = await getSyncStatus();
+    return NextResponse.json(status, { status: 200 });
+  } catch (error) {
+    console.error('Sync status API error:', error);
+    return NextResponse.json(
+      { error: error.message || 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
