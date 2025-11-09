@@ -8,316 +8,101 @@ A comprehensive, production-ready Ethereum blockchain explorer built with Next.j
 
 ---
 
-## ✨ Features
-
-### Core Functionality
-- **Real-time Blockchain Indexing**: Continuous synchronization with configurable start block
-- **Comprehensive Data Tracking**: Blocks, transactions, addresses, and contract interactions
-- **Advanced Search**: Search by block number, transaction hash, or Ethereum address
-- **Detailed Views**: In-depth pages for blocks, transactions, and addresses
-- **Pagination**: Efficient browsing of blocks and transactions
-- **Address Analytics**: Balance tracking, transaction history, and statistics
-
-### Industrial-Grade Features
-- **Configurable Start Block**: Start indexing from any block number via environment variable
-- **Batch Processing**: Efficient block processing with configurable batch sizes
-- **Error Handling**: Robust error handling with retry logic and exponential backoff
-- **Background Sync Service**: Continuous synchronization service for production deployments
-- **Database Optimization**: Comprehensive indexing for fast queries
-- **Real-time Updates**: Auto-refreshing data with sync status indicators
-- **Performance Optimized**: Efficient database queries with pagination and caching
-
-### User Interface
-- **Modern Design**: Professional, dark-themed UI with smooth animations
-- **Responsive Layout**: Fully responsive design for all device sizes
-- **Real-time Stats**: Live statistics dashboard with sync progress
-- **Navigation**: Easy navigation between blocks, transactions, and addresses
-- **Status Indicators**: Visual indicators for transaction status and sync state
-
----
-
-## 🛠️ Tech Stack
-
-- **Frontend**: Next.js 15 (App Router), React 19, Tailwind CSS
-- **Backend**: Next.js API Routes
-- **Database**: MongoDB with Mongoose
-- **Blockchain**: Web3.js for Ethereum interaction
-- **Icons**: React Icons
-
----
-
-## 📋 Prerequisites
-
-- **Node.js** (v18 or higher)
-- **MongoDB** (local installation recommended for development)
-- **Ethereum RPC Endpoint** (public RPC or your own node)
-
----
-
 ## 🚀 Quick Start
 
-### 1. Clone the Repository
+### Prerequisites
+- **Node.js** (v18 or higher)
+- **MongoDB** (local or Atlas)
+- **Ethereum RPC Endpoint** (public RPC or your own node)
 
-```bash
-git clone https://github.com/aakash4dev/nextjs-ethereum-explorer.git
-cd nextjs-ethereum-explorer
-```
+### Installation
 
-### 2. Install Dependencies
+1. **Clone and install:**
+   ```bash
+   git clone https://github.com/aakash4dev/nextjs-ethereum-explorer.git
+   cd nextjs-ethereum-explorer
+   npm install
+   ```
 
-```bash
-npm install
-```
+2. **Configure environment:**
+   ```bash
+   cp .example.env .env
+   ```
+   
+   Edit `.env` with your settings:
+   ```env
+   ETHEREUM_RPC_URL=https://ethereum-rpc.publicnode.com
+   MONGODB_URI=mongodb://localhost:27017/ethereum_indexer
+   START_BLOCK=23756000  # Recent block for faster sync
+   INDEXER_BATCH_SIZE=10
+   SYNC_INTERVAL=5000
+   ```
 
-### 3. Configure Environment Variables
+3. **Setup MongoDB:**
+   
+   **Ubuntu/Debian:**
+   ```bash
+   curl -fsSL https://www.mongodb.org/static/pgp/server-7.0.asc | sudo gpg -o /usr/share/keyrings/mongodb-server-7.0.gpg --dearmor
+   echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-7.0.gpg ] https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/7.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-7.0.list
+   sudo apt-get update && sudo apt-get install -y mongodb-org
+   sudo systemctl start mongod && sudo systemctl enable mongod
+   ```
+   
+   **macOS:**
+   ```bash
+   brew tap mongodb/brew
+   brew install mongodb-community
+   brew services start mongodb-community
+   ```
+   
+   **Windows:** Download from [MongoDB Download Center](https://www.mongodb.com/try/download/community)
+   
+   **Or use MongoDB Atlas:** See [MongoDB Atlas setup guide](https://www.mongodb.com/cloud/atlas/register)
 
-Create a `.env` file in the project root (copy from `.example.env`):
+4. **Run the application:**
+   
+   **Terminal 1 - Frontend:**
+   ```bash
+   npm run dev
+   ```
+   
+   **Terminal 2 - Indexer:**
+   ```bash
+   npm run sync
+   ```
 
-```bash
-cp .example.env .env
-```
+5. **Verify it's working:**
+   ```bash
+   curl http://localhost:3000/api/indexer
+   curl http://localhost:3000/api/stats
+   ```
 
-Edit `.env` with your configuration:
+Visit [http://localhost:3000](http://localhost:3000) to see the explorer!
 
-```env
-# Ethereum RPC URL
-ETHEREUM_RPC_URL=https://ethereum-rpc.publicnode.com
+### Screenshots
 
-# MongoDB Connection String
-MONGODB_URI=mongodb://localhost:27017/ethereum_indexer
-
-# Indexer Configuration
-START_BLOCK=23756000             # Start from recent block (faster than genesis)
-INDEXER_BATCH_SIZE=10            # Number of blocks to process per sync cycle
-SYNC_INTERVAL=5000               # Sync interval in milliseconds
-```
-
-**Important Notes:**
-- **Environment File**: Use `.env` for both local development and production
-- **For Local Development**: Use `mongodb://localhost:27017/ethereum_indexer`
-- **For Production (Vercel)**: Set environment variables in Vercel dashboard (Settings → Environment Variables)
-- **START_BLOCK**: Set to a recent block number (e.g., 23756000) for faster initial sync
-- **Example Files**: `.example.env` and `.example.local.env` are provided as reference templates
-
-### 4. Setup Local MongoDB
-
-#### Ubuntu/Debian:
-```bash
-# Import MongoDB public GPG key
-curl -fsSL https://www.mongodb.org/static/pgp/server-7.0.asc | sudo gpg -o /usr/share/keyrings/mongodb-server-7.0.gpg --dearmor
-
-# Add MongoDB repository
-echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-7.0.gpg ] https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/7.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-7.0.list
-
-# Update and install
-sudo apt-get update
-sudo apt-get install -y mongodb-org
-
-# Start MongoDB service
-sudo systemctl start mongod
-sudo systemctl enable mongod
-
-# Verify it's running
-sudo systemctl status mongod
-```
-
-#### macOS:
-```bash
-brew tap mongodb/brew
-brew install mongodb-community
-brew services start mongodb-community
-```
-
-#### Windows:
-Download and install from [MongoDB Download Center](https://www.mongodb.com/try/download/community)
-
-**Alternative: MongoDB Atlas (Cloud)**
-If you prefer cloud MongoDB, see the [MongoDB Atlas setup guide](https://www.mongodb.com/cloud/atlas/register) and update `MONGODB_URI` in `.env`
-
-### 5. Run the Application Locally
-
-**Step 1: Start the Frontend (Terminal 1)**
-```bash
-npm run dev
-```
-
-Wait for: `Ready on http://localhost:3000`
-
-**Step 2: Start the Background Indexer (Terminal 2)**
-```bash
-npm run sync
-```
-
-This will continuously sync blocks in the background.
-
-**Verify Everything is Working:**
-```bash
-# Check sync status
-curl http://localhost:3000/api/indexer
-
-# Check database stats
-curl http://localhost:3000/api/stats
-
-# View latest blocks
-curl "http://localhost:3000/api/data?limit=5"
-```
-
-The application will be available at [http://localhost:3000](http://localhost:3000).
+<div align="center">
+  <img src="./public/homepage.png" alt="Homepage" width="800" style="border-radius: 8px; margin: 10px;" />
+  <img src="./public/blockpage.png" alt="Block Page" width="800" style="border-radius: 8px; margin: 10px;" />
+  <img src="./public/transactionpage.png" alt="Transaction Page" width="800" style="border-radius: 8px; margin: 10px;" />
+</div>
 
 ---
 
-## 🔄 Background Sync Service
+## ✨ Features
 
-For continuous syncing in local development, run the background sync service:
+- **Real-time Blockchain Indexing** - Continuous synchronization with configurable start block
+- **Comprehensive Data Tracking** - Blocks, transactions, addresses, and contract interactions
+- **Advanced Search** - Search by block number, transaction hash, or Ethereum address
+- **Address Analytics** - Balance tracking, transaction history, and statistics
+- **Modern UI** - Professional, dark-themed interface with real-time stats
+- **Production Ready** - Robust error handling, batch processing, and database optimization
 
-**Terminal 1: Frontend**
-```bash
-npm run dev
-```
-
-**Terminal 2: Background Indexer**
-```bash
-npm run sync
-```
-
-The sync service will:
-- Continuously monitor for new blocks
-- Process blocks in batches (configured by `INDEXER_BATCH_SIZE`)
-- Handle errors gracefully with retry logic
-- Update sync status in the database
-- Log progress to console
-
-**Monitor Sync Progress:**
-```bash
-# Check sync status
-curl http://localhost:3000/api/indexer | python3 -m json.tool
-
-# Watch sync in real-time
-watch -n 2 'curl -s http://localhost:3000/api/indexer | python3 -m json.tool'
-```
-
-**For Production (PM2):**
-```bash
-pm2 start src/lib/sync-service.js --name ethereum-indexer
-pm2 logs ethereum-indexer
-pm2 save
-pm2 startup
-```
+See [ROADMAP.md](ROADMAP.md) for detailed features and future plans.
 
 ---
 
-## ✅ Verifying Sync is Working
-
-### Quick Verification Commands
-
-**1. Check Sync Status:**
-```bash
-curl http://localhost:3000/api/indexer | python3 -m json.tool
-```
-
-Look for:
-- `isSyncing`: `true` when actively syncing
-- `lastProcessedBlock`: Should increase over time
-- `totalBlocksIndexed`: Should increase
-- `totalTransactionsIndexed`: Should increase
-
-**2. Check Database Statistics:**
-```bash
-curl http://localhost:3000/api/stats | python3 -m json.tool
-```
-
-**3. View Latest Indexed Blocks:**
-```bash
-curl "http://localhost:3000/api/data?limit=5" | python3 -m json.tool
-```
-
-**4. Check MongoDB Directly:**
-```bash
-mongosh mongodb://localhost:27017/ethereum_indexer
-```
-
-Then run:
-```javascript
-// Check indexer state
-db.indexerstates.findOne({ key: "sync_state" })
-
-// Count blocks
-db.blocks.countDocuments()
-
-// Count transactions
-db.transactions.countDocuments()
-```
-
----
-
-## 🛑 How to Stop Sync
-
-### Method 1: Stop the Sync Service (Recommended)
-In the terminal where `npm run sync` is running:
-- Press `Ctrl+C` to stop gracefully
-
-### Method 2: Kill the Process
-```bash
-# Find the process
-ps aux | grep "sync.js"
-
-# Kill it (replace PID with actual process ID)
-kill <PID>
-
-# Or kill all sync processes
-pkill -f "sync.js"
-```
-
-### Method 3: Reset Indexer State (if stuck)
-```bash
-mongosh mongodb://localhost:27017/ethereum_indexer --eval "db.indexerstates.updateOne({ key: 'sync_state' }, { \$set: { isSyncing: false } })"
-```
-
----
-
-## 🚀 Deployment
-
-### Vercel (Recommended for Frontend)
-
-1. **Push code to GitHub**
-
-2. **Import project in Vercel**
-   - Go to [vercel.com](https://vercel.com)
-   - Click "Add New Project"
-   - Import your GitHub repository
-
-3. **Add Environment Variables in Vercel**
-   - Go to **Project Settings → Environment Variables**
-   - Add each variable from your `.env` file:
-     - `MONGODB_URI` (MongoDB Atlas connection string)
-     - `ETHEREUM_RPC_URL`
-     - `START_BLOCK`
-     - `INDEXER_BATCH_SIZE`
-     - `SYNC_INTERVAL`
-   - Select all environments (Production, Preview, Development)
-   - Click "Save"
-
-4. **Deploy**
-   - Vercel will automatically deploy on push
-   - Or manually trigger a redeploy after adding env vars
-
-**Important**: Vercel uses environment variables from its dashboard, not from `.env` file. The `.env` file is for local development only.
-
-### MongoDB Atlas Setup
-1. Create a free cluster at [MongoDB Atlas](https://www.mongodb.com/cloud/atlas)
-2. Create a database user
-3. Get connection string
-4. Whitelist IP: `0.0.0.0/0` (or Vercel's IP ranges)
-5. Add connection string to Vercel environment variables
-
-### Background Sync Service
-- Deploy sync service separately (VPS, AWS EC2, etc.)
-- Use PM2 or similar process manager
-- Set up monitoring and alerts
-
----
-
-## 🔧 Configuration Options
+## 🔧 Configuration
 
 | Variable | Description | Default |
 |----------|-------------|---------|
@@ -329,48 +114,80 @@ mongosh mongodb://localhost:27017/ethereum_indexer --eval "db.indexerstates.upda
 
 ---
 
-## 🐛 Quick Troubleshooting
+## 🚀 Deployment
+
+### Vercel (Frontend)
+
+1. Push code to GitHub
+2. Import project in [Vercel](https://vercel.com)
+3. Add environment variables in **Settings → Environment Variables**:
+   - `MONGODB_URI` (MongoDB Atlas connection string)
+   - `ETHEREUM_RPC_URL`
+   - `START_BLOCK`
+   - `INDEXER_BATCH_SIZE`
+   - `SYNC_INTERVAL`
+4. Deploy
+
+**Note:** Vercel uses environment variables from its dashboard, not from `.env` file.
+
+### Background Sync Service
+
+Deploy the sync service separately (VPS, AWS EC2, etc.):
+```bash
+pm2 start src/lib/sync-service.js --name ethereum-indexer
+pm2 logs ethereum-indexer
+pm2 save
+pm2 startup
+```
+
+---
+
+## 🐛 Troubleshooting
 
 ### Indexer Not Syncing
 ```bash
-# Check if MongoDB is running
+# Check MongoDB
 sudo systemctl status mongod
-
-# Test MongoDB connection
 mongosh mongodb://localhost:27017/ethereum_indexer --eval "db.stats()"
 
 # Check sync status
 curl http://localhost:3000/api/indexer
 ```
 
-### "Indexer is already running" (Stuck State)
+### Reset Database
 ```bash
-# Reset the stuck state
-mongosh mongodb://localhost:27017/ethereum_indexer --eval "db.indexerstates.updateOne({ key: 'sync_state' }, { \$set: { isSyncing: false } })"
-
-# Then restart sync
-npm run sync
-```
-
-### Reset Database (Fresh Start)
-```bash
-# Using NPM script
 npm run reset-db
-
-# Or manually via MongoDB
+# Or manually:
 mongosh mongodb://localhost:27017/ethereum_indexer --eval "db.dropDatabase()"
 ```
 
-For more detailed troubleshooting, see [ARCHITECTURE.md](ARCHITECTURE.md).
+### "Indexer is already running" (Stuck)
+```bash
+mongosh mongodb://localhost:27017/ethereum_indexer --eval "db.indexerstates.updateOne({ key: 'sync_state' }, { \$set: { isSyncing: false } })"
+npm run sync
+```
+
+For detailed troubleshooting, see [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ---
 
 ## 📚 Documentation
 
-- **[ARCHITECTURE.md](ARCHITECTURE.md)** - Detailed architecture, API endpoints, database schema, and advanced topics
-- **[CONTRIBUTING.md](CONTRIBUTING.md)** - Guidelines for contributing to the project
-- **[VERIFY_SYNC.md](VERIFY_SYNC.md)** - Detailed guide on verifying sync status
-- **[SYNC_CHECK.md](SYNC_CHECK.md)** - Sync monitoring and troubleshooting guide
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** - Detailed architecture, API endpoints, database schema
+- **[ROADMAP.md](ROADMAP.md)** - Current features and future roadmap
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** - Contribution guidelines
+- **[VERIFY_SYNC.md](VERIFY_SYNC.md)** - Sync verification guide
+- **[SYNC_CHECK.md](SYNC_CHECK.md)** - Sync monitoring guide
+
+---
+
+## 🛠️ Tech Stack
+
+- **Frontend**: Next.js 15 (App Router), React 19, Tailwind CSS
+- **Backend**: Next.js API Routes
+- **Database**: MongoDB with Mongoose
+- **Blockchain**: Web3.js v4
+- **Icons**: React Icons
 
 ---
 
