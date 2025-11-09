@@ -448,16 +448,6 @@ export default function Home() {
                   </p>
                 </div>
               ) : (
-                <div className="text-center py-12">
-                  <FaExchangeAlt className="text-6xl text-gray-600 mx-auto mb-4" />
-                  <p className="text-gray-400 text-lg mb-2">No transactions indexed yet</p>
-                  <p className="text-gray-500 text-sm">
-                    Start the sync service from the backend to begin indexing transactions.
-                    <br />
-                    <code className="bg-gray-900/50 px-2 py-1 rounded text-xs mt-2 inline-block">npm run sync</code>
-                  </p>
-                </div>
-              ) : (
                 <table className="w-full text-left">
                   <thead>
                     <tr className="border-b border-gray-600">
