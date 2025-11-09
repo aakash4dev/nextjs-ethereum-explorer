@@ -2,14 +2,8 @@ import Link from "next/link";
 import { FaCube, FaUserSecret, FaGasPump, FaListOl, FaHashtag, FaClock, FaExchangeAlt, FaArrowLeft, FaEthereum, FaArrowRight, FaArrowLeft as FaArrowLeftIcon } from "react-icons/fa";
 import Footer from "../../components/Footer";
 
-const getBaseUrl = () => {
-  if (typeof window !== 'undefined') return '';
-  return process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-};
-
 async function getBlockData(number) {
-  const baseUrl = getBaseUrl();
-  const res = await fetch(`${baseUrl}/api/block/${number}`, { next: { revalidate: 10 } });
+  const res = await fetch(`/api/block/${number}`, { next: { revalidate: 10 } });
   if (!res.ok) {
     throw new Error("Failed to fetch block data");
   }

@@ -13,8 +13,8 @@ import { readFileSync } from 'fs';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Load .env.local synchronously
-const envPath = join(__dirname, '../.env.local');
+// Load .env synchronously
+const envPath = join(__dirname, '../.env');
 try {
   const envContent = readFileSync(envPath, 'utf8');
   envContent.split('\n').forEach(line => {
@@ -35,22 +35,23 @@ try {
       }
     }
   });
-  console.log('✅ Loaded environment variables from .env.local');
+  console.log('✅ Loaded environment variables from .env');
 } catch (error) {
-  console.error('❌ Error loading .env.local:', error.message);
+  console.error('❌ Error loading .env:', error.message);
   console.error(`   Path: ${envPath}`);
-  console.error('   Please create .env.local file in the project root');
+  console.error('   Please create .env file in the project root');
+  console.error('   You can copy from .example.env as a reference');
   process.exit(1);
 }
 
 // Verify required variables
 if (!process.env.MONGODB_URI) {
-  console.error('❌ MONGODB_URI not found in .env.local');
+  console.error('❌ MONGODB_URI not found in .env');
   process.exit(1);
 }
 
 if (!process.env.ETHEREUM_RPC_URL) {
-  console.error('❌ ETHEREUM_RPC_URL not found in .env.local');
+  console.error('❌ ETHEREUM_RPC_URL not found in .env');
   process.exit(1);
 }
 

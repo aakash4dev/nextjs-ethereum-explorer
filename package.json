@@ -3,6 +3,22 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "description": "Industrial-grade Ethereum blockchain explorer with real-time indexing, transaction tracking, and address analytics",
+  "author": "Aakash Singh Rajput",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/aakash4dev/nextjs-ethereum-explorer.git"
+  },
+  "keywords": [
+    "ethereum",
+    "blockchain",
+    "explorer",
+    "indexer",
+    "web3",
+    "nextjs",
+    "mongodb"
+  ],
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",

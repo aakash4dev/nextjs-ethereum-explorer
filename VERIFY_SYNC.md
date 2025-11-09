@@ -132,12 +132,12 @@ mongosh mongodb://localhost:27017/ethereum_indexer --eval "db.indexerstates.upda
 
 ### Sync Not Starting
 1. Check MongoDB is running: `sudo systemctl status mongod`
-2. Check .env.local has correct values
+2. Check .env has correct values
 3. Reset indexer state (see above)
 4. Restart sync service: `npm run sync`
 
 ### Sync Too Slow
-- Increase `INDEXER_BATCH_SIZE` in .env.local
+- Increase `INDEXER_BATCH_SIZE` in .env
 - Use a faster RPC endpoint
 - Check RPC rate limits
 

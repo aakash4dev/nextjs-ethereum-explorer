@@ -2,14 +2,8 @@ import Link from "next/link";
 import { FaExchangeAlt, FaArrowLeft, FaEthereum } from "react-icons/fa";
 import Footer from "../components/Footer";
 
-const getBaseUrl = () => {
-  if (typeof window !== 'undefined') return '';
-  return process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-};
-
 async function getTransactions(page = 1) {
-  const baseUrl = getBaseUrl();
-  const res = await fetch(`${baseUrl}/api/transactions?page=${page}&limit=20`, { next: { revalidate: 10 } });
+  const res = await fetch(`/api/transactions?page=${page}&limit=20`, { next: { revalidate: 10 } });
   if (!res.ok) {
     throw new Error("Failed to fetch transactions");
   }

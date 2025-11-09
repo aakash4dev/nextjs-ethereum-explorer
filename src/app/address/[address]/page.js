@@ -3,14 +3,8 @@ import { FaUserSecret, FaExchangeAlt, FaCube, FaArrowLeft, FaEthereum, FaCopy, F
 import Footer from "../../components/Footer";
 import { Suspense } from "react";
 
-const getBaseUrl = () => {
-  if (typeof window !== 'undefined') return '';
-  return process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-};
-
 async function getAddressData(address) {
-  const baseUrl = getBaseUrl();
-  const res = await fetch(`${baseUrl}/api/address/${address}`, { next: { revalidate: 10 } });
+  const res = await fetch(`/api/address/${address}`, { next: { revalidate: 10 } });
   if (!res.ok) {
     throw new Error("Failed to fetch address data");
   }

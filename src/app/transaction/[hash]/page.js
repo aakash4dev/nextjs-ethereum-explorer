@@ -2,14 +2,8 @@ import Link from "next/link";
 import { FaExchangeAlt, FaCube, FaUserSecret, FaGasPump, FaHashtag, FaArrowRight, FaListOl, FaArrowLeft, FaEthereum, FaCheckCircle, FaTimesCircle } from "react-icons/fa";
 import Footer from "../../components/Footer";
 
-const getBaseUrl = () => {
-  if (typeof window !== 'undefined') return '';
-  return process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-};
-
 async function getTransactionData(hash) {
-  const baseUrl = getBaseUrl();
-  const res = await fetch(`${baseUrl}/api/transaction/${hash}`, { next: { revalidate: 10 } });
+  const res = await fetch(`/api/transaction/${hash}`, { next: { revalidate: 10 } });
   if (!res.ok) {
     throw new Error("Failed to fetch transaction data");
   }

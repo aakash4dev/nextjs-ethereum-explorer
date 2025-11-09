@@ -20,7 +20,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 // Load environment variables
-const envPath = join(__dirname, '../.env.local');
+const envPath = join(__dirname, '../.env');
 try {
   const envContent = readFileSync(envPath, 'utf8');
   envContent.split('\n').forEach(line => {
@@ -41,14 +41,16 @@ try {
     }
   });
 } catch (error) {
-  console.error('Error loading .env.local:', error.message);
+  console.error('Error loading .env:', error.message);
+  console.error('   Please create .env file in the project root');
+  console.error('   You can copy from .example.env as a reference');
   process.exit(1);
 }
 
 const MONGODB_URI = process.env.MONGODB_URI;
 
 if (!MONGODB_URI) {
-  console.error('❌ MONGODB_URI not found in .env.local');
+  console.error('❌ MONGODB_URI not found in .env');
   process.exit(1);
 }
 

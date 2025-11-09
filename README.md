@@ -67,13 +67,13 @@ npm install
 
 ### 3. Configure Environment Variables
 
-Create a `.env.local` file in the project root (copy from `.example.env`):
+Create a `.env` file in the project root (copy from `.example.env`):
 
 ```bash
-cp .example.env .env.local
+cp .example.env .env
 ```
 
-Edit `.env.local` with your configuration:
+Edit `.env` with your configuration:
 
 ```env
 # Ethereum RPC URL (public endpoint for local testing)
@@ -87,15 +87,20 @@ START_BLOCK=23756000             # Start from recent block (faster than genesis)
                                  # Set to 0 to start from genesis (very slow)
 INDEXER_BATCH_SIZE=10            # Number of blocks to process per sync cycle
 SYNC_INTERVAL=5000               # Sync interval in milliseconds (for background service)
-
-# Optional: Site URL for server-side rendering
-NEXT_PUBLIC_SITE_URL=http://localhost:3000
 ```
 
 **Important Notes:**
+- **Environment File**: Use `.env` for both local development and production
 - **For Local Development**: Use `mongodb://localhost:27017/ethereum_indexer`
+- **For Production (Vercel)**: 
+  - Use MongoDB Atlas connection string
+  - Set environment variables in Vercel dashboard (Settings → Environment Variables)
+  - Vercel uses its own environment variables, not the `.env` file
 - **START_BLOCK**: Set to a recent block number (e.g., 23756000) for faster initial sync
 - **RPC Endpoint**: Public endpoints have rate limits; consider using Infura/Alchemy for production
+- **Example Files**: 
+  - `.example.env` - Reference template for `.env` file
+  - `.example.local.env` - Additional reference for local development patterns
 
 ### 4. Setup Local MongoDB
 
@@ -138,7 +143,7 @@ mongosh mongodb://localhost:27017/ethereum_indexer --eval "db.stats()"
 ```
 
 **Alternative: MongoDB Atlas (Cloud)**
-If you prefer cloud MongoDB, see the [MongoDB Atlas setup guide](https://www.mongodb.com/cloud/atlas/register) and update `MONGODB_URI` in `.env.local`
+If you prefer cloud MongoDB, see the [MongoDB Atlas setup guide](https://www.mongodb.com/cloud/atlas/register) and update `MONGODB_URI` in `.env`
 
 ### 5. Run the Application Locally
 
@@ -392,7 +397,7 @@ db.indexerstates.updateOne(
 **Important**: Starting from block 0 (genesis) will take a very long time. For local testing, use a recent block:
 
 ```env
-# In .env.local
+# In .env
 START_BLOCK=23756000  # Recent block (faster sync)
 ```
 
@@ -608,21 +613,43 @@ npm run sync
 ## 🚀 Deployment
 
 ### Vercel (Recommended for Frontend)
-1. Push code to GitHub
-2. Import project in Vercel
-3. Add environment variables
-4. Deploy
 
-### MongoDB Atlas
-1. Create cluster
-2. Get connection string
-3. Add to environment variables
-4. Whitelist IP addresses
+1. **Push code to GitHub**
+
+2. **Import project in Vercel**
+   - Go to [vercel.com](https://vercel.com)
+   - Click "Add New Project"
+   - Import your GitHub repository
+
+3. **Add Environment Variables in Vercel**
+   - Go to **Project Settings → Environment Variables**
+   - Add each variable from your `.env` file:
+     - `MONGODB_URI` (MongoDB Atlas connection string)
+     - `ETHEREUM_RPC_URL`
+     - `START_BLOCK`
+     - `INDEXER_BATCH_SIZE`
+     - `SYNC_INTERVAL`
+   - Select all environments (Production, Preview, Development)
+   - Click "Save"
+
+4. **Deploy**
+   - Vercel will automatically deploy on push
+   - Or manually trigger a redeploy after adding env vars
+
+**Important**: Vercel uses environment variables from its dashboard, not from `.env` file. The `.env` file is for local development only.
+
+### MongoDB Atlas Setup
+1. Create a free cluster at [MongoDB Atlas](https://www.mongodb.com/cloud/atlas)
+2. Create a database user
+3. Get connection string
+4. Whitelist IP: `0.0.0.0/0` (or Vercel's IP ranges)
+5. Add connection string to Vercel environment variables
 
 ### Background Sync Service
 - Deploy sync service separately (VPS, AWS EC2, etc.)
 - Use PM2 or similar process manager
 - Set up monitoring and alerts
+- Use the same `.env` file or environment variables
 
 ---
 
@@ -684,6 +711,34 @@ This project demonstrates industrial-grade blockchain indexing and exploration. 
 ## 📄 License
 
 This project is licensed under the MIT License.
+
+### Copyright
+
+Copyright (c) 2024 Aakash Singh Rajput
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+## 🤝 Contributing
+
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on how to contribute to this project.
 
 ---
 

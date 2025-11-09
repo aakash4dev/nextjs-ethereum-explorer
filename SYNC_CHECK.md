@@ -91,15 +91,15 @@ watch -n 5 'curl -s http://localhost:3000/api/indexer | python3 -m json.tool'
 
 3. **MongoDB Connection Issues**
    - Check MongoDB is running
-   - Verify `MONGODB_URI` in `.env.local`
+   - Verify `MONGODB_URI` in `.env`
 
 4. **Network Issues**
    - Check RPC endpoint is accessible
-   - Verify `ETHEREUM_RPC_URL` in `.env.local`
+   - Verify `ETHEREUM_RPC_URL` in `.env`
 
 ## Recommended Settings
 
-For faster initial sync, update `.env.local`:
+For faster initial sync, update `.env`:
 
 ```env
 # Start from a recent block (not genesis)

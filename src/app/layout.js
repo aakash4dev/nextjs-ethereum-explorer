@@ -29,14 +29,12 @@ export const metadata = {
   authors: [{ name: "Aakash Singh Rajput" }],
   creator: "Aakash Singh Rajput",
   publisher: "Aakash Singh Rajput",
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'),
   alternates: {
     canonical: '/',
   },
   openGraph: {
     title: "Ethereum Explorer - Industrial Grade Blockchain Explorer",
     description: "Comprehensive Ethereum blockchain explorer with real-time indexing, transaction tracking, and address analytics",
-    url: process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000',
     siteName: "Ethereum Explorer",
     locale: "en_US",
     type: "website",
