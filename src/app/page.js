@@ -230,44 +230,41 @@ export default function Home() {
         </form>
         {searchError && <div className="text-center text-red-400 mb-4">{searchError}</div>}
 
-        {/* Database Connection Error */}
-        {apiError && !isLoading && (
-          <div className="bg-gradient-to-r from-red-900/50 to-orange-900/50 border-2 border-red-600 rounded-xl p-6 mb-8 shadow-lg">
+        {/* Blockchain Not Synced Warning */}
+        {(apiError || !stats || (stats.overview?.totalBlocks === 0 && stats.overview?.totalTransactions === 0)) && !isLoading && (
+          <div className={`bg-gradient-to-r ${apiError ? 'from-red-900/50 to-orange-900/50 border-red-600' : 'from-yellow-900/50 to-orange-900/50 border-yellow-600'} border-2 rounded-xl p-6 mb-8 shadow-lg`}>
             <div className="flex items-center gap-4">
-              <FaSync className="text-4xl text-red-400 animate-pulse" />
+              <FaSync className={`text-4xl ${apiError ? 'text-red-400' : 'text-yellow-400'} animate-pulse`} />
               <div className="flex-1">
-                <h3 className="text-xl font-bold text-red-300 mb-1">Database Not Connected</h3>
-                <p className="text-red-200/80 mb-2">
-                  Unable to connect to the database. Please check your MongoDB connection settings.
-                </p>
-                <div className="mt-3 pt-3 border-t border-red-700/50">
-                  <p className="text-sm text-red-200/70">
-                    <strong>For local development:</strong> Make sure MongoDB is running and <code className="bg-red-900/50 px-2 py-1 rounded font-mono">MONGODB_URI</code> in your <code className="bg-red-900/50 px-2 py-1 rounded font-mono">.env</code> file is correct.
-                  </p>
-                  <p className="text-sm text-red-200/70 mt-2">
-                    <strong>For Vercel:</strong> Check that environment variables are set correctly in Vercel dashboard (Settings → Environment Variables).
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Empty Database Warning */}
-        {!apiError && (!stats || (stats.overview?.totalBlocks === 0 && stats.overview?.totalTransactions === 0)) && !isLoading && (
-          <div className="bg-gradient-to-r from-yellow-900/50 to-orange-900/50 border-2 border-yellow-600 rounded-xl p-6 mb-8 shadow-lg">
-            <div className="flex items-center gap-4">
-              <FaSync className="text-4xl text-yellow-400 animate-pulse" />
-              <div className="flex-1">
-                <h3 className="text-xl font-bold text-yellow-300 mb-1">Database is Empty</h3>
-                <p className="text-yellow-200/80 mb-2">
-                  No blocks have been indexed yet. You need to start the sync service from the backend to begin indexing the blockchain.
-                </p>
-                <div className="mt-3 pt-3 border-t border-yellow-700/50">
-                  <p className="text-sm text-yellow-200/70">
-                    <strong>To start syncing:</strong> Run <code className="bg-yellow-900/50 px-2 py-1 rounded font-mono">npm run sync</code> in a separate terminal, or use the background sync service.
-                  </p>
-                </div>
+                <h3 className={`text-xl font-bold ${apiError ? 'text-red-300' : 'text-yellow-300'} mb-1`}>
+                  Blockchain is Not Synced
+                </h3>
+                {apiError ? (
+                  <>
+                    <p className={`${apiError ? 'text-red-200/80' : 'text-yellow-200/80'} mb-2`}>
+                      Unable to connect to the database. The blockchain sync service cannot run without a database connection.
+                    </p>
+                    <div className="mt-3 pt-3 border-t border-red-700/50">
+                      <p className="text-sm text-red-200/70">
+                        <strong>For local development:</strong> Make sure MongoDB is running and <code className="bg-red-900/50 px-2 py-1 rounded font-mono">MONGODB_URI</code> in your <code className="bg-red-900/50 px-2 py-1 rounded font-mono">.env</code> file is correct.
+                      </p>
+                      <p className="text-sm text-red-200/70 mt-2">
+                        <strong>For Vercel:</strong> Check that environment variables are set correctly in Vercel dashboard (Settings → Environment Variables).
+                      </p>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-yellow-200/80 mb-2">
+                      No blocks have been indexed yet. You need to start the sync service from the backend to begin indexing the blockchain.
+                    </p>
+                    <div className="mt-3 pt-3 border-t border-yellow-700/50">
+                      <p className="text-sm text-yellow-200/70">
+                        <strong>To start syncing:</strong> Run <code className="bg-yellow-900/50 px-2 py-1 rounded font-mono">npm run sync</code> in a separate terminal, or use the background sync service.
+                      </p>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -364,26 +361,25 @@ export default function Home() {
             <div className="overflow-x-auto">
               {(isLoading && data.blocks.length === 0) ? (
                 <div className="text-center py-8 text-gray-400">Loading blocks...</div>
-              ) : apiError ? (
+              ) : (apiError || !stats || stats.overview?.totalBlocks === 0) ? (
                 <div className="text-center py-12">
-                  <FaCube className="text-6xl text-red-600 mx-auto mb-4" />
-                  <p className="text-red-400 text-lg mb-2">Database Not Connected</p>
-                  <p className="text-gray-500 text-sm">
-                    Unable to connect to the database. Please check your MongoDB connection.
-                    <br />
-                    <span className="text-xs text-gray-600 mt-2 block">
-                      Check your <code className="bg-gray-900/50 px-2 py-1 rounded">MONGODB_URI</code> in <code className="bg-gray-900/50 px-2 py-1 rounded">.env</code> file or Vercel environment variables.
-                    </span>
+                  <FaCube className={`text-6xl ${apiError ? 'text-red-600' : 'text-gray-600'} mx-auto mb-4`} />
+                  <p className={`${apiError ? 'text-red-400' : 'text-gray-400'} text-lg mb-2`}>
+                    {apiError ? 'Blockchain Not Synced' : 'No blocks indexed yet'}
                   </p>
-                </div>
-              ) : (!stats || stats.overview?.totalBlocks === 0) ? (
-                <div className="text-center py-12">
-                  <FaCube className="text-6xl text-gray-600 mx-auto mb-4" />
-                  <p className="text-gray-400 text-lg mb-2">No blocks indexed yet</p>
                   <p className="text-gray-500 text-sm">
-                    Start the sync service from the backend to begin indexing blocks.
+                    {apiError 
+                      ? 'Unable to connect to the database. Please check your MongoDB connection.'
+                      : 'Start the sync service from the backend to begin indexing blocks.'
+                    }
                     <br />
-                    <code className="bg-gray-900/50 px-2 py-1 rounded text-xs mt-2 inline-block">npm run sync</code>
+                    {apiError ? (
+                      <span className="text-xs text-gray-600 mt-2 block">
+                        Check your <code className="bg-gray-900/50 px-2 py-1 rounded">MONGODB_URI</code> in <code className="bg-gray-900/50 px-2 py-1 rounded">.env</code> file or Vercel environment variables.
+                      </span>
+                    ) : (
+                      <code className="bg-gray-900/50 px-2 py-1 rounded text-xs mt-2 inline-block">npm run sync</code>
+                    )}
                   </p>
                 </div>
               ) : (
@@ -430,19 +426,28 @@ export default function Home() {
             <div className="overflow-x-auto">
               {(isLoading && data.transactions.length === 0) ? (
                 <div className="text-center py-8 text-gray-400">Loading transactions...</div>
-              ) : apiError ? (
+              ) : (apiError || !stats || stats.overview?.totalTransactions === 0) ? (
                 <div className="text-center py-12">
-                  <FaExchangeAlt className="text-6xl text-red-600 mx-auto mb-4" />
-                  <p className="text-red-400 text-lg mb-2">Database Not Connected</p>
+                  <FaExchangeAlt className={`text-6xl ${apiError ? 'text-red-600' : 'text-gray-600'} mx-auto mb-4`} />
+                  <p className={`${apiError ? 'text-red-400' : 'text-gray-400'} text-lg mb-2`}>
+                    {apiError ? 'Blockchain Not Synced' : 'No transactions indexed yet'}
+                  </p>
                   <p className="text-gray-500 text-sm">
-                    Unable to connect to the database. Please check your MongoDB connection.
+                    {apiError 
+                      ? 'Unable to connect to the database. Please check your MongoDB connection.'
+                      : 'Start the sync service from the backend to begin indexing transactions.'
+                    }
                     <br />
-                    <span className="text-xs text-gray-600 mt-2 block">
-                      Check your <code className="bg-gray-900/50 px-2 py-1 rounded">MONGODB_URI</code> in <code className="bg-gray-900/50 px-2 py-1 rounded">.env</code> file or Vercel environment variables.
-                    </span>
+                    {apiError ? (
+                      <span className="text-xs text-gray-600 mt-2 block">
+                        Check your <code className="bg-gray-900/50 px-2 py-1 rounded">MONGODB_URI</code> in <code className="bg-gray-900/50 px-2 py-1 rounded">.env</code> file or Vercel environment variables.
+                      </span>
+                    ) : (
+                      <code className="bg-gray-900/50 px-2 py-1 rounded text-xs mt-2 inline-block">npm run sync</code>
+                    )}
                   </p>
                 </div>
-              ) : (!stats || stats.overview?.totalTransactions === 0) ? (
+              ) : (
                 <div className="text-center py-12">
                   <FaExchangeAlt className="text-6xl text-gray-600 mx-auto mb-4" />
                   <p className="text-gray-400 text-lg mb-2">No transactions indexed yet</p>
