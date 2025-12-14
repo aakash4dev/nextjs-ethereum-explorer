@@ -13,6 +13,7 @@ export async function GET() {
       indexerState,
       blocksLast24h,
       transactionsLast24h,
+      marketData,
     ] = await Promise.all([
       Block.countDocuments(),
       Transaction.countDocuments(),
@@ -25,6 +26,12 @@ export async function GET() {
       Transaction.countDocuments({
         indexedAt: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
       }),
+      fetch("https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd&include_market_cap=true&include_24hr_change=true")
+        .then(res => res.json())
+        .catch(err => {
+          console.error("Failed to fetch price:", err);
+          return null;
+        }),
     ]);
 
     // Calculate gas statistics
@@ -61,6 +68,11 @@ export async function GET() {
         avgGasUsed: 0,
         avgGasLimit: 0,
         totalGasUsed: 0,
+      },
+      market: marketData?.ethereum || {
+        usd: 0,
+        usd_market_cap: 0,
+        usd_24h_change: 0,
       },
     });
   } catch (error) {

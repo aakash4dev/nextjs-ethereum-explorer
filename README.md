@@ -82,9 +82,25 @@ Visit [http://localhost:3000](http://localhost:3000) to see the explorer!
 ### Screenshots
 
 <div align="center">
-  <img src="./public/homepage.png" alt="Homepage" width="800" style="border-radius: 8px; margin: 10px;" />
-  <img src="./public/blockpage.png" alt="Block Page" width="800" style="border-radius: 8px; margin: 10px;" />
-  <img src="./public/transactionpage.png" alt="Transaction Page" width="800" style="border-radius: 8px; margin: 10px;" />
+  <h3>Video Walkthrough</h3>
+  <img src="./public/videos/walkthrough.webp" alt="Walkthrough Video" width="800" style="border-radius: 8px; margin: 10px;" />
+
+  <h3>Screenshots</h3>
+  
+  <p><strong>Homepage</strong></p>
+  <img src="./public/screenshots/home.png" alt="Homepage" width="800" style="border-radius: 8px; margin: 10px;" />
+
+  <p><strong>Transactions List</strong></p>
+  <img src="./public/screenshots/transactions.png" alt="Transactions List" width="800" style="border-radius: 8px; margin: 10px;" />
+
+  <p><strong>Transaction Details</strong></p>
+  <img src="./public/screenshots/transaction_detail.png" alt="Transaction Details" width="800" style="border-radius: 8px; margin: 10px;" />
+
+  <p><strong>Blocks List</strong></p>
+  <img src="./public/screenshots/blocks.png" alt="Blocks List" width="800" style="border-radius: 8px; margin: 10px;" />
+
+  <p><strong>Block Details</strong></p>
+  <img src="./public/screenshots/block_detail.png" alt="Block Details" width="800" style="border-radius: 8px; margin: 10px;" />
 </div>
 
 ---

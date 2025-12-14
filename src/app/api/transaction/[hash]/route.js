@@ -4,14 +4,14 @@ import { NextResponse } from 'next/server';
 export async function GET(req, { params }) {
   try {
     await dbConnect();
-    const { hash } = params;
+    const { hash } = await params;
 
     if (!hash || !hash.startsWith('0x')) {
       return NextResponse.json({ error: 'Invalid transaction hash' }, { status: 400 });
     }
 
     const transaction = await Transaction.findOne({ hash }).lean();
-    
+
     if (!transaction) {
       return NextResponse.json({ error: 'Transaction not found' }, { status: 404 });
     }

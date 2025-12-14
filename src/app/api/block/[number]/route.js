@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 export async function GET(req, { params }) {
   try {
     await dbConnect();
-    const { number } = params;
+    const { number } = await params;
     const blockNumber = parseInt(number, 10);
 
     if (isNaN(blockNumber)) {
@@ -12,7 +12,7 @@ export async function GET(req, { params }) {
     }
 
     const block = await Block.findOne({ number: blockNumber }).lean();
-    
+
     if (!block) {
       return NextResponse.json({ error: 'Block not found' }, { status: 404 });
     }
@@ -27,7 +27,7 @@ export async function GET(req, { params }) {
       .sort({ number: -1 })
       .select('number')
       .lean();
-    
+
     const nextBlock = await Block.findOne({ number: { $gt: blockNumber } })
       .sort({ number: 1 })
       .select('number')

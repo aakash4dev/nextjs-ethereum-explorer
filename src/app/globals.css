@@ -1,8 +1,14 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f8f9fa;
+  /* Etherscan Light Grey */
+  --foreground: #212529;
+  /* Dark Text */
+  --primary: #0784c3;
+  /* Etherscan Link Blue */
+  --hero-bg: #111b36;
+  /* Dark Blue Hero */
 }
 
 @theme inline {

@@ -26,7 +26,7 @@ function truncateHash(hash, start = 6, end = 4) {
 }
 
 export default async function AddressPage({ params }) {
-  const { address } = params;
+  const { address } = await params;
   let data, error;
 
   try {
@@ -37,9 +37,9 @@ export default async function AddressPage({ params }) {
 
   if (error) {
     return (
-      <div className="bg-gray-900 text-white min-h-screen font-sans flex flex-col">
+      <div className="bg-[#f8f9fa] text-[#212529] min-h-screen font-sans flex flex-col">
         <main className="container mx-auto p-4 md:p-8 flex-1">
-          <div className="text-red-400 text-center p-8">Error: {error}</div>
+          <div className="text-red-500 text-center p-8">Error: {error}</div>
         </main>
         <Footer />
       </div>
@@ -48,9 +48,9 @@ export default async function AddressPage({ params }) {
 
   if (!data || !data.address) {
     return (
-      <div className="bg-gray-900 text-white min-h-screen font-sans flex flex-col">
+      <div className="bg-[#f8f9fa] text-[#212529] min-h-screen font-sans flex flex-col">
         <main className="container mx-auto p-4 md:p-8 flex-1">
-          <div className="text-center p-8">Address not found.</div>
+          <div className="text-center p-8 text-gray-500">Address not found.</div>
         </main>
         <Footer />
       </div>
@@ -61,150 +61,179 @@ export default async function AddressPage({ params }) {
   const stats = data.stats || {};
 
   return (
-    <div className="bg-gray-900 text-white min-h-screen font-sans flex flex-col">
+    <div className="bg-[#f8f9fa] text-[#212529] min-h-screen font-sans flex flex-col">
       <main className="container mx-auto p-4 md:p-8 flex-1">
-        <header className="text-center mb-8 md:mb-12">
-          <h1 className="text-4xl md:text-5xl font-bold text-cyan-400 flex items-center justify-center gap-3">
-            <FaEthereum className="inline text-cyan-300 mb-1" /> Ethereum Explorer
+        <div className="flex items-center gap-4 mb-6 pt-2">
+          <h1 className="text-xl font-bold text-[#212529] flex items-center gap-2">
+            Address <span className="text-gray-500 text-base font-normal break-all">{addr.address}</span>
           </h1>
-        </header>
-
-        <div className="mb-6">
-          <Link href="/" className="inline-flex items-center gap-2 text-cyan-300 hover:underline bg-gray-800 px-4 py-2 rounded-lg shadow border border-gray-700 font-semibold text-lg">
-            <FaArrowLeft className="text-xl" /> Go Back to Explorer
-          </Link>
+          <button className="text-gray-400 hover:text-gray-600 transition-colors"><FaCopy /></button>
         </div>
 
-        <h1 className="text-3xl font-bold text-cyan-400 mb-6 flex items-center gap-2">
-          <FaUserSecret className="text-cyan-300" /> Address
-        </h1>
+        {/* Address Overview */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden mb-6">
+          <div className="p-4 border-b border-gray-200 bg-gray-50 font-bold text-sm text-gray-700">
+            Overview
+          </div>
 
-        {/* Address Info Card */}
-        <div className="bg-gray-800 rounded-xl p-6 mb-6 border border-gray-700">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div className="flex-1">
-              <div className="text-gray-400 text-sm mb-2">Address</div>
-              <div className="font-mono text-lg break-all text-cyan-300">{addr.address}</div>
+          <div className="p-5 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="text-gray-500 text-sm md:col-span-1 flex items-center gap-1">
+                <FaEthereum className="text-gray-400" /> ETH Balance:
+              </div>
+              <div className="md:col-span-3 text-sm font-medium">
+                {formatEther(addr.balance)} ETH
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              {addr.isContract && (
-                <span className="px-3 py-1 bg-purple-600 text-white rounded-lg text-sm font-semibold">
-                  Contract
-                </span>
-              )}
-              <span className="px-3 py-1 bg-gray-700 text-white rounded-lg text-sm">
-                {addr.isContract ? "Smart Contract" : "EOA"}
-              </span>
+
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="text-gray-500 text-sm md:col-span-1 flex items-center gap-1">
+                ETH Value:
+              </div>
+              <div className="md:col-span-3 text-sm">
+                $0.00 <span className="text-gray-400 text-xs">(@ $3,094.84/ETH)</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="text-gray-500 text-sm md:col-span-1 flex items-center gap-1">
+                Token Holdings:
+              </div>
+              <div className="md:col-span-3 text-sm">
+                {/* Placeholder for token holdings */}
+                <div className="relative inline-block text-left">
+                  <span className="text-gray-700">$0.00 <span className="text-xs text-gray-500">(0 Tokens)</span></span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <div className="bg-gray-800 rounded-xl p-4 border border-gray-700">
-            <div className="text-gray-400 text-sm mb-1">Balance</div>
-            <div className="text-2xl font-bold text-cyan-300">{formatEther(addr.balance)} ETH</div>
+        {/* More Info / Stats */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden mb-8">
+          <div className="p-4 border-b border-gray-200 bg-gray-50 font-bold text-sm text-gray-700">
+            More Info
           </div>
-          <div className="bg-gray-800 rounded-xl p-4 border border-gray-700">
-            <div className="text-gray-400 text-sm mb-1">Total Transactions</div>
-            <div className="text-2xl font-bold text-purple-300">{formatNumber(stats.totalTransactions || 0)}</div>
-          </div>
-          <div className="bg-gray-800 rounded-xl p-4 border border-gray-700">
-            <div className="text-gray-400 text-sm mb-1">Sent</div>
-            <div className="text-2xl font-bold text-red-300">{formatNumber(stats.sentCount || 0)}</div>
-          </div>
-          <div className="bg-gray-800 rounded-xl p-4 border border-gray-700">
-            <div className="text-gray-400 text-sm mb-1">Received</div>
-            <div className="text-2xl font-bold text-green-300">{formatNumber(stats.receivedCount || 0)}</div>
+          <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <div className="text-gray-500 text-sm mb-1">Last Transaction Sent</div>
+              <div className="text-sm font-medium">
+                {stats.sentCount ? formatNumber(stats.sentCount) : "0"} txn
+              </div>
+            </div>
+            <div>
+              <div className="text-gray-500 text-sm mb-1">First Transaction Sent</div>
+              <div className="text-sm font-medium">
+                -
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Transaction History */}
-        <h2 className="text-2xl font-semibold mb-4 text-cyan-300 flex items-center gap-2">
-          <FaExchangeAlt className="text-cyan-300" /> Transaction History
-        </h2>
 
-        <div className="bg-gray-800 rounded-xl p-4 border border-gray-700">
-          {data.transactions && data.transactions.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="border-b border-gray-700 text-gray-400 text-sm">
-                    <th className="p-2 font-semibold">Tx Hash</th>
-                    <th className="p-2 font-semibold">Block</th>
-                    <th className="p-2 font-semibold">From</th>
-                    <th className="p-2 font-semibold">To</th>
-                    <th className="p-2 font-semibold text-right">Value (ETH)</th>
-                    <th className="p-2 font-semibold text-center">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.transactions.map((tx) => (
-                    <tr key={tx.hash} className="border-b border-gray-700 hover:bg-gray-700/40 transition-colors">
-                      <td className="p-2 font-mono text-cyan-300 break-all">
-                        <Link href={`/transaction/${tx.hash}`} className="hover:underline">
-                          {truncateHash(tx.hash)}
-                        </Link>
-                      </td>
-                      <td className="p-2">
-                        <Link href={`/block/${tx.blockNumber}`} className="text-cyan-400 hover:underline">
-                          {formatNumber(tx.blockNumber)}
-                        </Link>
-                      </td>
-                      <td className="p-2 font-mono text-purple-300 break-all">
-                        {tx.from.toLowerCase() === addr.address.toLowerCase() ? (
-                          <span className="text-red-300">You</span>
-                        ) : (
-                          truncateHash(tx.from)
-                        )}
-                      </td>
-                      <td className="p-2 font-mono text-green-300 break-all">
-                        {tx.to && tx.to.toLowerCase() === addr.address.toLowerCase() ? (
-                          <span className="text-green-300">You</span>
-                        ) : (
-                          tx.to ? truncateHash(tx.to) : "Contract Creation"
-                        )}
-                      </td>
-                      <td className="p-2 text-right">
-                        <span className={tx.from.toLowerCase() === addr.address.toLowerCase() ? "text-red-300" : "text-green-300"}>
-                          {tx.from.toLowerCase() === addr.address.toLowerCase() ? "-" : "+"}
-                          {formatEther(tx.value)}
-                        </span>
-                      </td>
-                      <td className="p-2 text-center">
-                        {tx.status === 1 ? (
-                          <span className="px-2 py-1 bg-green-600 text-white rounded text-xs">Success</span>
-                        ) : (
-                          <span className="px-2 py-1 bg-red-600 text-white rounded text-xs">Failed</span>
-                        )}
-                      </td>
+        {/* Transaction History Section */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+          <div className="p-4 border-b border-gray-200 flex justify-between items-center">
+            <h2 className="font-bold text-gray-700 text-sm">Transactions</h2>
+            {/* Tabs could go here */}
+          </div>
+          <div className="p-4">
+            {data.transactions && data.transactions.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="border-b border-gray-200 text-gray-500 text-sm">
+                      <th className="p-2 font-semibold">Tx Hash</th>
+                      <th className="p-2 font-semibold">Block</th>
+                      <th className="p-2 font-semibold">Age</th>
+                      <th className="p-2 font-semibold">From</th>
+                      <th className="p-2 font-semibold">To</th>
+                      <th className="p-2 font-semibold text-right">Value</th>
+                      <th className="p-2 font-semibold text-right">Txn Fee</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="text-center text-gray-400 py-8">No transactions found.</div>
-          )}
+                  </thead>
+                  <tbody>
+                    {data.transactions.map((tx) => (
+                      <tr key={tx.hash} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                        <td className="p-2 font-mono text-sm text-[#0784c3]">
+                          <Link href={`/transaction/${tx.hash}`} className="hover:underline">
+                            {truncateHash(tx.hash)}
+                          </Link>
+                        </td>
+                        <td className="p-2 text-sm">
+                          <Link href={`/block/${tx.blockNumber}`} className="text-[#0784c3] hover:underline">
+                            {formatNumber(tx.blockNumber)}
+                          </Link>
+                        </td>
+                        <td className="p-2 text-sm text-gray-500">
+                          -
+                        </td>
+                        <td className="p-2 font-mono text-sm text-[#0784c3] break-all">
+                          {tx.from.toLowerCase() === addr.address.toLowerCase() ? (
+                            <span className="text-gray-700 font-normal">
+                              {truncateHash(tx.from)}
+                            </span>
+                          ) : (
+                            <Link href={`/address/${tx.from}`} className="hover:underline">
+                              {truncateHash(tx.from)}
+                            </Link>
+                          )}
+                        </td>
+                        <td className="p-2 font-mono text-sm break-all pt-3">
+                          <span className={`inline-flex items-center justify-center p-1 rounded-full text-[10px] w-12 border ${tx.from.toLowerCase() === addr.address.toLowerCase() ? 'bg-yellow-50 text-yellow-600 border-yellow-200' : 'bg-green-50 text-green-600 border-green-200'} mr-2 font-bold uppercase`}>
+                            {tx.from.toLowerCase() === addr.address.toLowerCase() ? 'OUT' : 'IN'}
+                          </span>
+                          {tx.to && tx.to.toLowerCase() === addr.address.toLowerCase() ? (
+                            <span className="text-gray-700">{truncateHash(tx.to)}</span>
+                          ) : (
+                            <Link href={`/address/${tx.to}`} className="text-[#0784c3] hover:underline">
+                              {tx.to ? truncateHash(tx.to) : "Contract Creation"}
+                            </Link>
+                          )}
+                        </td>
+                        <td className="p-2 text-right text-gray-700 text-sm">
+                          {formatEther(tx.value)} ETH
+                        </td>
+                        <td className="p-2 text-right text-gray-500 text-xs">
+                          {tx.gasUsed && tx.effectiveGasPrice ? formatEther(BigInt(tx.gasUsed) * BigInt(tx.effectiveGasPrice)) : "0"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="text-center text-gray-500 py-8">No transactions found.</div>
+            )}
+
+            {/* Pagination */}
+            {data.pagination && data.pagination.totalPages > 1 && (
+              <div className="mt-6 flex justify-between items-center text-sm text-gray-600">
+                <div>Page {data.pagination.page || 1} of {data.pagination.totalPages}</div>
+                <div className="flex gap-2">
+                  {(data.pagination.page || 1) > 1 && (
+                    <Link
+                      href={`/address/${address}?page=${(data.pagination.page || 1) - 1}`}
+                      className="px-3 py-1 bg-[#e9ecef] hover:bg-[#dee2e6] rounded text-[#0784c3] font-medium transition-colors"
+                    >
+                      &lt; Previous
+                    </Link>
+                  )}
+                  {(data.pagination.page || 1) < data.pagination.totalPages && (
+                    <Link
+                      href={`/address/${address}?page=${(data.pagination.page || 1) + 1}`}
+                      className="px-3 py-1 bg-[#e9ecef] hover:bg-[#dee2e6] rounded text-[#0784c3] font-medium transition-colors"
+                    >
+                      Next &gt;
+                    </Link>
+                  )}
+                </div>
+              </div>
+            )}
+
+          </div>
         </div>
 
-        {/* Pagination */}
-        {data.pagination && data.pagination.totalPages > 1 && (
-          <div className="mt-6 flex justify-center gap-2">
-            {Array.from({ length: Math.min(5, data.pagination.totalPages) }, (_, i) => {
-              const page = i + 1;
-              return (
-                <Link
-                  key={page}
-                  href={`/address/${address}?page=${page}`}
-                  className="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg border border-gray-700"
-                >
-                  {page}
-                </Link>
-              );
-            })}
-          </div>
-        )}
       </main>
       <Footer />
     </div>

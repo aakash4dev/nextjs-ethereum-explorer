@@ -1,9 +1,8 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useState, useRef } from "react";
-import { FaSync, FaEthereum, FaCube, FaExchangeAlt, FaSearch, FaChartLine, FaUsers } from "react-icons/fa";
+import { FaSync, FaEthereum, FaCube, FaExchangeAlt, FaSearch, FaChartLine, FaUsers, FaGasPump, FaListOl } from "react-icons/fa";
 import { SiBlockchaindotcom } from "react-icons/si";
-import Footer from "./components/Footer";
 
 const formatNumber = (num) => new Intl.NumberFormat("en-US").format(num);
 const truncateHash = (hash, start = 6, end = 4) => hash ? `${hash.substring(0, start)}...${hash.substring(hash.length - end)}` : "";
@@ -27,51 +26,19 @@ export default function Home() {
         fetch("/api/data?limit=10"),
         fetch("/api/stats"),
       ]);
-      
+
       if (dataRes.ok) {
         const fetchedData = await dataRes.json();
         setData(fetchedData);
       } else {
         setApiError(true);
       }
-      
+
       if (statsRes.ok) {
         const fetchedStats = await statsRes.json();
         setStats(fetchedStats);
       } else {
         // If stats API fails, set default empty stats
-        if (!stats) {
-          setStats({
-            overview: {
-              totalBlocks: 0,
-              totalTransactions: 0,
-              totalAddresses: 0,
-              latestBlockNumber: 0,
-            },
-            indexer: {
-              lastProcessedBlock: 0,
-              isSyncing: false,
-              totalBlocksIndexed: 0,
-              totalTransactionsIndexed: 0,
-            },
-            activity: {
-              blocksLast24h: 0,
-              transactionsLast24h: 0,
-            },
-            gas: {
-              avgGasUsed: 0,
-              avgGasLimit: 0,
-              totalGasUsed: 0,
-            },
-          });
-        }
-        setApiError(true);
-      }
-    } catch (error) {
-      console.error("Error fetching data:", error.message);
-      setApiError(true);
-      // Set default empty stats on error
-      if (!stats) {
         setStats({
           overview: {
             totalBlocks: 0,
@@ -95,7 +62,35 @@ export default function Home() {
             totalGasUsed: 0,
           },
         });
+        setApiError(true);
       }
+    } catch (error) {
+      console.error("Error fetching data:", error.message);
+      setApiError(true);
+      // Set default empty stats on error
+      setStats({
+        overview: {
+          totalBlocks: 0,
+          totalTransactions: 0,
+          totalAddresses: 0,
+          latestBlockNumber: 0,
+        },
+        indexer: {
+          lastProcessedBlock: 0,
+          isSyncing: false,
+          totalBlocksIndexed: 0,
+          totalTransactionsIndexed: 0,
+        },
+        activity: {
+          blocksLast24h: 0,
+          transactionsLast24h: 0,
+        },
+        gas: {
+          avgGasUsed: 0,
+          avgGasLimit: 0,
+          totalGasUsed: 0,
+        },
+      });
     } finally {
       setIsLoading(false);
     }
@@ -109,21 +104,6 @@ export default function Home() {
         setSyncStatus(status);
       } else {
         // Set default sync status if API fails
-        if (!syncStatus) {
-          setSyncStatus({
-            isSyncing: false,
-            lastProcessedBlock: 0,
-            totalBlocksIndexed: 0,
-            totalTransactionsIndexed: 0,
-            blocksBehind: 0,
-            syncProgress: 0,
-          });
-        }
-      }
-    } catch (error) {
-      console.error("Error fetching sync status:", error.message);
-      // Set default sync status on error
-      if (!syncStatus) {
         setSyncStatus({
           isSyncing: false,
           lastProcessedBlock: 0,
@@ -133,6 +113,17 @@ export default function Home() {
           syncProgress: 0,
         });
       }
+    } catch (error) {
+      console.error("Error fetching sync status:", error.message);
+      // Set default sync status on error
+      setSyncStatus({
+        isSyncing: false,
+        lastProcessedBlock: 0,
+        totalBlocksIndexed: 0,
+        totalTransactionsIndexed: 0,
+        blocksBehind: 0,
+        syncProgress: 0,
+      });
     }
   };
 
@@ -189,7 +180,7 @@ export default function Home() {
       fetchData();
       fetchSyncStatus();
     }
-    
+
     // Auto-refresh every 10 seconds
     const interval = setInterval(() => {
       fetchData();
@@ -200,290 +191,226 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="bg-gray-900 text-white min-h-screen font-sans flex flex-col">
-      <main className="container mx-auto p-4 md:p-8 flex-1">
-        <header className="text-center mb-8 md:mb-12">
-          <h1 className="text-4xl md:text-5xl font-bold text-cyan-400 flex items-center justify-center gap-3">
-            <FaEthereum className="inline text-cyan-300 mb-1" /> Ethereum Explorer
-          </h1>
-          <p className="text-gray-400 mt-2 text-lg">Industrial-grade blockchain explorer with real-time indexing</p>
-        </header>
-
-        {/* Search Bar */}
-        <form onSubmit={handleSearch} className="flex flex-col sm:flex-row justify-center mb-8 gap-2 max-w-3xl mx-auto">
-          <div className="relative flex-1">
-            <input
-              type="text"
-              className="w-full py-3 pl-12 pr-4 rounded-lg bg-gray-800 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-cyan-500 text-lg shadow-lg"
-              placeholder="Search by block number, tx hash, or address..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-            />
-            <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-xl" />
-          </div>
-          <button 
-            type="submit" 
-            className="bg-cyan-500 hover:bg-cyan-600 text-white font-bold px-8 py-3 rounded-lg transition duration-200 shadow-lg shadow-cyan-500/30"
-          >
-            Search
-          </button>
-        </form>
-        {searchError && <div className="text-center text-red-400 mb-4">{searchError}</div>}
-
-        {/* Blockchain Not Synced Warning */}
-        {(apiError || !stats || (stats.overview?.totalBlocks === 0 && stats.overview?.totalTransactions === 0)) && !isLoading && (
-          <div className={`bg-gradient-to-r ${apiError ? 'from-red-900/50 to-orange-900/50 border-red-600' : 'from-yellow-900/50 to-orange-900/50 border-yellow-600'} border-2 rounded-xl p-6 mb-8 shadow-lg`}>
-            <div className="flex items-center gap-4">
-              <FaSync className={`text-4xl ${apiError ? 'text-red-400' : 'text-yellow-400'} animate-pulse`} />
-              <div className="flex-1">
-                <h3 className={`text-xl font-bold ${apiError ? 'text-red-300' : 'text-yellow-300'} mb-1`}>
-                  Blockchain is Not Synced
-                </h3>
-                {apiError ? (
-                  <>
-                    <p className={`${apiError ? 'text-red-200/80' : 'text-yellow-200/80'} mb-2`}>
-                      Unable to connect to the database. The blockchain sync service cannot run without a database connection.
-                    </p>
-                    <div className="mt-3 pt-3 border-t border-red-700/50">
-                      <p className="text-sm text-red-200/70">
-                        <strong>For local development:</strong> Make sure MongoDB is running and <code className="bg-red-900/50 px-2 py-1 rounded font-mono">MONGODB_URI</code> in your <code className="bg-red-900/50 px-2 py-1 rounded font-mono">.env</code> file is correct.
-                      </p>
-                      <p className="text-sm text-red-200/70 mt-2">
-                        <strong>For Vercel:</strong> Check that environment variables are set correctly in Vercel dashboard (Settings → Environment Variables).
-                      </p>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <p className="text-yellow-200/80 mb-2">
-                      No blocks have been indexed yet. You need to start the sync service from the backend to begin indexing the blockchain.
-                    </p>
-                    <div className="mt-3 pt-3 border-t border-yellow-700/50">
-                      <p className="text-sm text-yellow-200/70">
-                        <strong>To start syncing:</strong> Run <code className="bg-yellow-900/50 px-2 py-1 rounded font-mono">npm run sync</code> in a separate terminal, or use the background sync service.
-                      </p>
-                    </div>
-                  </>
-                )}
+    <div className="bg-[#f8f9fa] text-[#212529] min-h-screen font-sans flex flex-col">
+      {/* Hero Section */}
+      <section className="bg-[#111b36] py-12 pb-16 relative">
+        <div className="container mx-auto px-4 md:px-8 relative z-10">
+          <div className="max-w-4xl mx-auto text-left md:text-center mb-8">
+            <h1 className="text-xl md:text-2xl text-white font-medium mb-4">The Ethereum Blockchain Explorer</h1>
+            {/* Search Bar */}
+            <form onSubmit={handleSearch} className="relative w-full">
+              <div className="flex bg-white rounded p-1">
+                <div className="flex-1 relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <span className="text-gray-500 text-sm">All Filters</span>
+                    <span className="mx-2 text-gray-300">|</span>
+                  </div>
+                  <input
+                    type="text"
+                    className="w-full pl-24 pr-4 py-2 text-gray-700 focus:outline-none"
+                    placeholder="Search by Address / Txn Hash / Block / Token / Domain Name"
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                  />
+                </div>
+                <button type="submit" className="bg-[#0784c3] text-white rounded px-4 py-2 hover:bg-[#0670a6] transition-colors">
+                  <FaSearch />
+                </button>
               </div>
+              {searchError && <div className="absolute top-full left-0 mt-1 text-red-400 text-sm bg-black/50 px-2 py-1 rounded">{searchError}</div>}
+            </form>
+          </div>
+        </div>
+        {/* Background Waves/Pattern - Simplified representation */}
+        <div className="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-t from-[#f8f9fa] to-transparent opacity-10"></div>
+      </section>
+
+      <main className="container mx-auto p-4 md:p-8 flex-1 -mt-10 relative z-20">
+        {/* Stats Dashboard */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 divide-y md:divide-y-0 md:divide-x divide-gray-100">
+
+            {/* ETHER PRICE / MARKET CAP */}
+            <div className="px-4">
+              <div className="flex items-start gap-3 mb-4">
+                <FaEthereum className="text-3xl text-gray-400" />
+                <div>
+                  <div className="text-xs text-gray-500 uppercase font-bold mb-1">ETHER PRICE</div>
+                  <div className="font-medium">
+                    {stats?.market?.usd ? `$${formatNumber(stats.market.usd)}` : "$0.00"}
+                    <span className={`text-sm ml-1 ${stats?.market?.usd_24h_change >= 0 ? "text-green-500" : "text-red-500"}`}>
+                      ({stats?.market?.usd_24h_change ? stats.market.usd_24h_change.toFixed(2) : "0.00"}%)
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <SiBlockchaindotcom className="text-3xl text-gray-400" />
+                <div>
+                  <div className="text-xs text-gray-500 uppercase font-bold mb-1">MARKET CAP</div>
+                  <div className="font-medium">
+                    {stats?.market?.usd_market_cap ? `$${formatNumber(stats.market.usd_market_cap)}` : "$0.00"}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* TRANSACTIONS / FINALIZED BLOCK */}
+            <div className="px-4">
+              <div className="flex items-start gap-3 mb-4">
+                <FaExchangeAlt className="text-3xl text-gray-400" />
+                <div>
+                  <div className="text-xs text-gray-500 uppercase font-bold mb-1">TRANSACTIONS</div>
+                  <div className="font-medium">{stats?.overview?.totalTransactions ? formatNumber(stats.overview.totalTransactions) : "-"} <span className="text-gray-400 text-sm">({stats?.activity ? (stats.activity.transactionsLast24h / 86400).toFixed(1) : "-"} TPS)</span></div>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="relative">
+                  <FaCube className="text-3xl text-gray-400" />
+                  {isSyncing && <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white animate-pulse"></div>}
+                </div>
+                <div>
+                  <div className="text-xs text-gray-500 uppercase font-bold mb-1">LAST FINALIZED BLOCK</div>
+                  <div className="font-medium">{stats?.overview?.latestBlockNumber ? formatNumber(stats.overview.latestBlockNumber) : "-"}</div>
+                </div>
+              </div>
+            </div>
+
+            {/* GAS / HISTORY */}
+            <div className="px-4">
+              <div className="flex items-start gap-3 mb-4">
+                <FaGasPump className="text-3xl text-gray-400" />
+                <div>
+                  <div className="text-xs text-gray-500 uppercase font-bold mb-1">MED GAS PRICE</div>
+                  <div className="font-medium">0.036 Gwei <span className="text-gray-400 text-sm">($0.01)</span></div>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <FaChartLine className="text-3xl text-gray-400" />
+                <div className="w-full">
+                  <div className="text-xs text-gray-500 uppercase font-bold mb-1">TRANSACTION HISTORY IN 14 DAYS</div>
+                  {/* Placeholder Graph */}
+                  <div className="h-10 w-full bg-gray-50 rounded border border-gray-100 relative overflow-hidden">
+                    <svg viewBox="0 0 100 20" className="w-full h-full text-gray-300 fill-current opacity-50">
+                      <path d="M0,10 Q25,20 50,10 T100,10 V20 H0 Z" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        {/* Sync Warning */}
+        {(apiError || (stats?.overview?.totalBlocks === 0 && !isLoading)) && (
+          <div className="bg-orange-50 border border-orange-200 rounded p-4 mb-8 flex items-center gap-3">
+            <FaSync className="text-orange-500" />
+            <div className="text-sm text-orange-800">
+              {apiError ? 'Cannot connect to Database.' : 'Blockchain sync is starting...'} Please check your backend connection.
             </div>
           </div>
         )}
 
-        {/* Stats Overview */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-            <div className="flex items-center gap-4 bg-gradient-to-br from-gray-800 to-gray-900 p-6 rounded-xl border border-gray-700 shadow-lg hover:shadow-cyan-500/20 transition-shadow">
-              <FaCube className="text-4xl text-cyan-400" />
-              <div>
-                <div className="text-gray-400 text-sm">Latest Block</div>
-                <div className="text-2xl font-bold text-cyan-200">{stats?.overview?.latestBlockNumber ? formatNumber(stats.overview.latestBlockNumber) : "-"}</div>
-                {syncStatus && (
-                  <div className="text-xs text-gray-500 mt-1">
-                    {syncStatus.blocksBehind > 0 ? `${syncStatus.blocksBehind} behind` : "Synced"}
-                  </div>
-                )}
-              </div>
-            </div>
-            <div className="flex items-center gap-4 bg-gradient-to-br from-gray-800 to-gray-900 p-6 rounded-xl border border-gray-700 shadow-lg hover:shadow-purple-500/20 transition-shadow">
-              <FaExchangeAlt className="text-4xl text-purple-400" />
-              <div>
-                <div className="text-gray-400 text-sm">Total Transactions</div>
-                <div className="text-2xl font-bold text-purple-200">{stats?.overview?.totalTransactions ? formatNumber(stats.overview.totalTransactions) : "-"}</div>
-                {stats?.activity && (
-                  <div className="text-xs text-gray-500 mt-1">
-                    {formatNumber(stats.activity.transactionsLast24h)} last 24h
-                  </div>
-                )}
-              </div>
-            </div>
-            <div className="flex items-center gap-4 bg-gradient-to-br from-gray-800 to-gray-900 p-6 rounded-xl border border-gray-700 shadow-lg hover:shadow-green-500/20 transition-shadow">
-              <SiBlockchaindotcom className="text-4xl text-green-400" />
-              <div>
-                <div className="text-gray-400 text-sm">Indexed Blocks</div>
-                <div className="text-2xl font-bold text-green-200">{stats?.overview?.totalBlocks ? formatNumber(stats.overview.totalBlocks) : "-"}</div>
-                {stats?.activity && (
-                  <div className="text-xs text-gray-500 mt-1">
-                    {formatNumber(stats.activity.blocksLast24h)} last 24h
-                  </div>
-                )}
-              </div>
-            </div>
-            <div className="flex items-center gap-4 bg-gradient-to-br from-gray-800 to-gray-900 p-6 rounded-xl border border-gray-700 shadow-lg hover:shadow-yellow-500/20 transition-shadow">
-              <FaSync className={`text-4xl ${isSyncing ? "animate-spin text-yellow-400" : "text-yellow-400"}`} />
-              <div>
-                <div className="text-gray-400 text-sm">Sync Status</div>
-                <div className="text-2xl font-bold text-yellow-200">{isSyncing ? "Syncing..." : syncStatus?.isSyncing ? "Syncing..." : "Up to date"}</div>
-                {syncStatus && syncStatus.syncProgress > 0 && (
-                  <div className="text-xs text-gray-500 mt-1">
-                    {syncStatus.syncProgress}% complete
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
+        {/* Two Column Layout: Latest Blocks & Latest Transactions */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-        {/* Additional Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-            <div className="bg-gray-800/70 p-5 rounded-xl border border-gray-700">
-              <div className="flex items-center gap-2 mb-2">
-                <FaUsers className="text-cyan-400" />
-                <div className="text-gray-400 text-sm">Total Addresses</div>
-              </div>
-              <div className="text-xl font-bold text-cyan-200">{stats?.overview?.totalAddresses ? formatNumber(stats.overview.totalAddresses) : "-"}</div>
+          {/* Latest Blocks */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 flex flex-col">
+            <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-[#f8f9fa]">
+              <h2 className="font-bold text-[#212529] text-base">Latest Blocks</h2>
+              <Link href="/blocks" className="bg-white border border-gray-200 text-[#0784c3] text-xs px-2 py-1 rounded hover:bg-[#0784c3] hover:text-white transition-colors uppercase font-medium">Customize</Link>
             </div>
-            <div className="bg-gray-800/70 p-5 rounded-xl border border-gray-700">
-              <div className="flex items-center gap-2 mb-2">
-                <FaChartLine className="text-purple-400" />
-                <div className="text-gray-400 text-sm">Avg Gas Used</div>
-              </div>
-              <div className="text-xl font-bold text-purple-200">
-                {stats?.gas?.avgGasUsed ? formatNumber(Math.round(stats.gas.avgGasUsed)) : "-"}
-              </div>
-            </div>
-            <div className="bg-gray-800/70 p-5 rounded-xl border border-gray-700">
-              <div className="flex items-center gap-2 mb-2">
-                <FaSync className="text-green-400" />
-                <div className="text-gray-400 text-sm">Indexer Progress</div>
-              </div>
-              <div className="text-xl font-bold text-green-200">
-                {syncStatus?.totalBlocksIndexed ? formatNumber(syncStatus.totalBlocksIndexed) : "-"} blocks
-              </div>
-            </div>
-          </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Latest Blocks Section */}
-          <div className="bg-gray-800/50 backdrop-blur-sm p-6 rounded-xl shadow-2xl border border-gray-700">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-2xl font-semibold text-cyan-300">Latest Blocks</h2>
-              <Link href="/blocks" className="text-cyan-400 hover:underline text-sm">View All</Link>
-            </div>
-            <div className="overflow-x-auto">
-              {(isLoading && data.blocks.length === 0) ? (
-                <div className="text-center py-8 text-gray-400">Loading blocks...</div>
-              ) : (apiError || !stats || stats.overview?.totalBlocks === 0) ? (
-                <div className="text-center py-12">
-                  <FaCube className={`text-6xl ${apiError ? 'text-red-600' : 'text-gray-600'} mx-auto mb-4`} />
-                  <p className={`${apiError ? 'text-red-400' : 'text-gray-400'} text-lg mb-2`}>
-                    {apiError ? 'Blockchain Not Synced' : 'No blocks indexed yet'}
-                  </p>
-                  <p className="text-gray-500 text-sm">
-                    {apiError 
-                      ? 'Unable to connect to the database. Please check your MongoDB connection.'
-                      : 'Start the sync service from the backend to begin indexing blocks.'
-                    }
-                    <br />
-                    {apiError ? (
-                      <span className="text-xs text-gray-600 mt-2 block">
-                        Check your <code className="bg-gray-900/50 px-2 py-1 rounded">MONGODB_URI</code> in <code className="bg-gray-900/50 px-2 py-1 rounded">.env</code> file or Vercel environment variables.
-                      </span>
-                    ) : (
-                      <code className="bg-gray-900/50 px-2 py-1 rounded text-xs mt-2 inline-block">npm run sync</code>
-                    )}
-                  </p>
+            <div className="flex-1 overflow-x-auto">
+              {data.blocks && data.blocks.length > 0 ? (
+                <div className="divide-y divide-gray-100">
+                  {data.blocks.map(block => (
+                    <div key={block.hash} className="p-4 flex flex-col md:flex-row gap-4 items-center">
+                      <div className="hidden md:flex items-center justify-center w-10 h-10 bg-gray-100 rounded text-gray-500 shrink-0">
+                        <FaCube />
+                      </div>
+                      <div className="flex-1 flex flex-col md:flex-row justify-between w-full gap-2">
+                        <div className="min-w-0">
+                          <div className="text-[#0784c3] font-medium truncate">
+                            <Link href={`/block/${block.number}`}>{formatNumber(block.number)}</Link>
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {new Date(block.timestamp).toLocaleTimeString()}
+                          </div>
+                        </div>
+                        <div className="min-w-0 md:text-right">
+                          <div className="text-sm text-gray-700 truncate">
+                            Miner <Link href={`/address/${block.miner}`} className="text-[#0784c3] truncate">{truncateHash(block.miner)}</Link>
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            <Link href={`/blocks`} className="text-[#0784c3]">{block.transactionCount} txns</Link> in 12 secs
+                          </div>
+                        </div>
+                        <div className="min-w-0 md:text-right shrink-0">
+                          <div className="text-xs font-medium bg-gray-100 text-gray-600 rounded px-2 py-0.5 inline-block">{formatEther(block.gasUsed)} Eth</div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               ) : (
-                <table className="w-full text-left">
-                  <thead>
-                    <tr className="border-b border-gray-600">
-                      <th className="p-2 text-sm text-gray-400">Block</th>
-                      <th className="p-2 text-sm text-gray-400">Miner</th>
-                      <th className="p-2 text-sm text-gray-400 text-right">Txs</th>
-                      <th className="p-2 text-sm text-gray-400 text-right">Gas Used</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.blocks && data.blocks.length > 0 ? (
-                      data.blocks.map(block => (
-                        <tr key={block.hash} className="border-b border-gray-700 hover:bg-gray-700/50 transition-colors">
-                          <td className="p-3 text-cyan-400 font-mono">
-                            <Link href={`/block/${block.number}`} className="hover:underline">
-                              {formatNumber(block.number)}
-                            </Link>
-                          </td>
-                          <td className="p-3 font-mono text-purple-400 text-sm">{truncateHash(block.miner)}</td>
-                          <td className="p-3 text-right">{block.transactionCount}</td>
-                          <td className="p-3 text-right text-sm">{formatNumber(block.gasUsed)}</td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan="4" className="p-3 text-center text-gray-400">No blocks found.</td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
+                <div className="p-8 text-center text-gray-500 text-sm">No blocks found</div>
               )}
+            </div>
+            <div className="p-3 border-t border-gray-100 bg-[#f8f9fa] text-center">
+              <Link href="/blocks" className="text-[#0784c3] text-xs uppercase font-bold hover:text-[#0670a6]">View all blocks</Link>
             </div>
           </div>
 
-          {/* Latest Transactions Section */}
-          <div className="bg-gray-800/50 backdrop-blur-sm p-6 rounded-xl shadow-2xl border border-gray-700">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-2xl font-semibold text-cyan-300">Latest Transactions</h2>
-              <Link href="/transactions" className="text-cyan-400 hover:underline text-sm">View All</Link>
+          {/* Latest Transactions */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 flex flex-col">
+            <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-[#f8f9fa]">
+              <h2 className="font-bold text-[#212529] text-base">Latest Transactions</h2>
+              <Link href="/transactions" className="bg-white border border-gray-200 text-[#0784c3] text-xs px-2 py-1 rounded hover:bg-[#0784c3] hover:text-white transition-colors uppercase font-medium">Customize</Link>
             </div>
-            <div className="overflow-x-auto">
-              {(isLoading && data.transactions.length === 0) ? (
-                <div className="text-center py-8 text-gray-400">Loading transactions...</div>
-              ) : (apiError || !stats || stats.overview?.totalTransactions === 0) ? (
-                <div className="text-center py-12">
-                  <FaExchangeAlt className={`text-6xl ${apiError ? 'text-red-600' : 'text-gray-600'} mx-auto mb-4`} />
-                  <p className={`${apiError ? 'text-red-400' : 'text-gray-400'} text-lg mb-2`}>
-                    {apiError ? 'Blockchain Not Synced' : 'No transactions indexed yet'}
-                  </p>
-                  <p className="text-gray-500 text-sm">
-                    {apiError 
-                      ? 'Unable to connect to the database. Please check your MongoDB connection.'
-                      : 'Start the sync service from the backend to begin indexing transactions.'
-                    }
-                    <br />
-                    {apiError ? (
-                      <span className="text-xs text-gray-600 mt-2 block">
-                        Check your <code className="bg-gray-900/50 px-2 py-1 rounded">MONGODB_URI</code> in <code className="bg-gray-900/50 px-2 py-1 rounded">.env</code> file or Vercel environment variables.
-                      </span>
-                    ) : (
-                      <code className="bg-gray-900/50 px-2 py-1 rounded text-xs mt-2 inline-block">npm run sync</code>
-                    )}
-                  </p>
+            <div className="flex-1 overflow-x-auto">
+              {data.transactions && data.transactions.length > 0 ? (
+                <div className="divide-y divide-gray-100">
+                  {data.transactions.map(tx => (
+                    <div key={tx.hash} className="p-4 flex flex-col md:flex-row gap-4 items-center">
+                      <div className="hidden md:flex items-center justify-center w-10 h-10 bg-gray-100 rounded text-gray-500 shrink-0">
+                        <FaListOl />
+                      </div>
+                      <div className="flex-1 flex flex-col md:flex-row justify-between w-full gap-2">
+                        <div className="min-w-0">
+                          <div className="text-[#0784c3] font-medium truncate">
+                            <Link href={`/transaction/${tx.hash}`}>{truncateHash(tx.hash)}</Link>
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            Just now
+                          </div>
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-sm text-gray-700 truncate">
+                            From <Link href={`/address/${tx.from}`} className="text-[#0784c3] truncate">{truncateHash(tx.from)}</Link>
+                          </div>
+                          <div className="text-sm text-gray-700 truncate">
+                            To <Link href={`/address/${tx.to}`} className="text-[#0784c3] truncate">{truncateHash(tx.to || "Contract")}</Link>
+                          </div>
+                        </div>
+                        <div className="min-w-0 md:text-right shrink-0">
+                          <div className="text-xs font-medium bg-gray-100 text-gray-600 rounded px-2 py-0.5 inline-block">{formatEther(tx.value)} Eth</div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               ) : (
-                <table className="w-full text-left">
-                  <thead>
-                    <tr className="border-b border-gray-600">
-                      <th className="p-2 text-sm text-gray-400">Hash</th>
-                      <th className="p-2 text-sm text-gray-400">From</th>
-                      <th className="p-2 text-sm text-gray-400">To</th>
-                      <th className="p-2 text-sm text-gray-400 text-right">Value</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.transactions && data.transactions.length > 0 ? (
-                      data.transactions.map(tx => (
-                        <tr key={tx.hash} className="border-b border-gray-700 hover:bg-gray-700/50 transition-colors">
-                          <td className="p-3 font-mono text-cyan-400 text-sm">
-                            <Link href={`/transaction/${tx.hash}`} className="hover:underline">
-                              {truncateHash(tx.hash)}
-                            </Link>
-                          </td>
-                          <td className="p-3 font-mono text-purple-400 text-sm">{truncateHash(tx.from)}</td>
-                          <td className="p-3 font-mono text-purple-400 text-sm">{truncateHash(tx.to || "Contract")}</td>
-                          <td className="p-3 text-right text-sm">{formatEther(tx.value)} ETH</td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan="4" className="p-3 text-center text-gray-400">No transactions found.</td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
+                <div className="p-8 text-center text-gray-500 text-sm">No transactions found</div>
               )}
             </div>
+            <div className="p-3 border-t border-gray-100 bg-[#f8f9fa] text-center">
+              <Link href="/transactions" className="text-[#0784c3] text-xs uppercase font-bold hover:text-[#0670a6]">View all transactions</Link>
+            </div>
           </div>
+
         </div>
       </main>
-      <Footer />
-    </div>
+    </div >
   );
 }
