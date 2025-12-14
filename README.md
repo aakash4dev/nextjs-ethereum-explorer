@@ -223,13 +223,15 @@ For detailed troubleshooting, see [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ### Custom Blockchain Explorers
 
-This project demonstrates industrial-grade blockchain indexing and exploration. The architecture can be adapted for:
-- Other EVM-compatible chains (Polygon, BSC, Avalanche, etc.)
-- Custom blockchain networks
-- Layer 2 solutions
-- Private blockchain networks
+This project demonstrates industrial-grade blockchain indexing and exploration. 
 
-**Available for contract work to build custom blockchain explorers and indexers.**
+> **Note**: While this repository provides a robust and functional foundation, it is intended as a showcase of core capabilities. It is not a fully-fledged, enterprise-ready production deployment out of the box.
+
+I am available for **paid engagement** to develop fully customized, production-grade blockchain explorers and indexers tailored to your specific requirements, including:
+- Custom EVM-compatible chains (Polygon, BSC, Avalanche, etc.)
+- Layer 2 solutions and validiums
+- Private permissioned blockchain networks
+- Enterprise-grade security and infrastructure setup
 
 * **Email:** [aakash4dev.me@gmail.com](mailto:aakash4dev.me@gmail.com)
 
