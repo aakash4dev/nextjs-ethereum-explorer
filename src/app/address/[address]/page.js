@@ -1,242 +1,274 @@
-import Link from "next/link";
-import { FaUserSecret, FaExchangeAlt, FaCube, FaArrowLeft, FaEthereum, FaCopy, FaCheck } from "react-icons/fa";
-import Footer from "../../components/Footer";
-import { Suspense } from "react";
+import Link from 'next/link';
+import { notFound } from 'next/navigation';
+import { FaCheckCircle, FaDownload, FaFileContract, FaUser } from 'react-icons/fa';
+import CopyButton from '@/components/client/CopyButton';
+import TimeAgo from '@/components/client/TimeAgo';
+import { ReadContract, SourceViewer, WriteContract } from '@/components/client/ContractInteract';
+import { Badge, Card, CodeBlock, Container, DetailRow, EmptyState, Notice, PageHeader, Pagination, Table, Tabs, Td, Th } from '@/components/ui';
+import { AddressLink, BlockLink, NativeAmount, TokenAmount, TokenLink, TxLink } from '@/components/links';
+import { InternalTxTable, TokenTransfersTable, TransactionsTable } from '@/components/tables';
+import { getAddressLogs, getAddressOverview } from '@/lib/services/addresses';
+import { listInternalTransactions, listTransactions } from '@/lib/services/transactions';
+import { listTokenTransfers } from '@/lib/services/tokens';
+import { getMinedBlocks, listWithdrawals } from '@/lib/services/blocks';
+import { getVerifiedContract } from '@/lib/services/contracts';
+import { chainId } from '@/lib/services/common';
+import { getClient } from '@/lib/rpc';
+import { dbConnect } from '@/lib/db';
+import { checksum, formatNumber, formatUsd } from '@/lib/format';
+import { isAddress, parsePagination } from '@/lib/validation';
+import config from '@/lib/config';
 
-async function getAddressData(address) {
-  const res = await fetch(`/api/address/${address}`, { next: { revalidate: 10 } });
-  if (!res.ok) {
-    throw new Error("Failed to fetch address data");
-  }
-  return res.json();
-}
+export const dynamic = 'force-dynamic';
 
-function formatEther(wei) {
-  const eth = Number(wei) / 1e18;
-  return eth.toFixed(6);
-}
-
-function formatNumber(num) {
-  return new Intl.NumberFormat("en-US").format(num);
-}
-
-function truncateHash(hash, start = 6, end = 4) {
-  if (!hash) return "";
-  return `${hash.substring(0, start)}...${hash.substring(hash.length - end)}`;
-}
-
-export default async function AddressPage({ params }) {
+export async function generateMetadata({ params }) {
   const { address } = await params;
-  let data, error;
+  return { title: `Address ${checksum(address)}`, description: `${config.chainName} address ${address}: balance, transactions, token holdings and contract details.` };
+}
 
-  try {
-    data = await getAddressData(address);
-  } catch (e) {
-    error = e.message;
-  }
-
-  if (error) {
-    return (
-      <div className="bg-[#f8f9fa] text-[#212529] min-h-screen font-sans flex flex-col">
-        <main className="container mx-auto p-4 md:p-8 flex-1">
-          <div className="text-red-500 text-center p-8">Error: {error}</div>
-        </main>
-        <Footer />
-      </div>
-    );
-  }
-
-  if (!data || !data.address) {
-    return (
-      <div className="bg-[#f8f9fa] text-[#212529] min-h-screen font-sans flex flex-col">
-        <main className="container mx-auto p-4 md:p-8 flex-1">
-          <div className="text-center p-8 text-gray-500">Address not found.</div>
-        </main>
-        <Footer />
-      </div>
-    );
-  }
-
-  const addr = data.address;
-  const stats = data.stats || {};
-
+function ContractTab({ address, overview, sub, verified, implementation, cid, bytecode }) {
+  const base = `/address/${address}?tab=contract`;
+  const subtabs = [
+    { key: 'code', label: 'Code', href: `${base}&sub=code` },
+    verified && { key: 'read', label: 'Read Contract', href: `${base}&sub=read` },
+    verified && { key: 'write', label: 'Write Contract', href: `${base}&sub=write` },
+    implementation && { key: 'readProxy', label: 'Read as Proxy', href: `${base}&sub=readProxy` },
+    implementation && { key: 'writeProxy', label: 'Write as Proxy', href: `${base}&sub=writeProxy` },
+  ];
   return (
-    <div className="bg-[#f8f9fa] text-[#212529] min-h-screen font-sans flex flex-col">
-      <main className="container mx-auto p-4 md:p-8 flex-1">
-        <div className="flex items-center gap-4 mb-6 pt-2">
-          <h1 className="text-xl font-bold text-[#212529] flex items-center gap-2">
-            Address <span className="text-gray-500 text-base font-normal break-all">{addr.address}</span>
-          </h1>
-          <button className="text-gray-400 hover:text-gray-600 transition-colors"><FaCopy /></button>
-        </div>
-
-        {/* Address Overview */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden mb-6">
-          <div className="p-4 border-b border-gray-200 bg-gray-50 font-bold text-sm text-gray-700">
-            Overview
-          </div>
-
-          <div className="p-5 space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="text-gray-500 text-sm md:col-span-1 flex items-center gap-1">
-                <FaEthereum className="text-gray-400" /> ETH Balance:
+    <div>
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-3">
+        <Tabs tabs={subtabs} active={sub} />
+        {!verified && <Link href={`/verifyContract?a=${address}`} className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-primary-hover">Verify &amp; Publish</Link>}
+      </div>
+      {overview.proxy && (
+        <Notice tone="info" className="m-4">
+          This contract appears to be a proxy ({overview.proxy.type}). Implementation:{' '}
+          <AddressLink address={overview.proxy.implementation} truncate={false} />{' '}
+          {overview.proxy.implementationVerified ? <Badge tone="success">Verified{overview.proxy.implementationName ? `: ${overview.proxy.implementationName}` : ''}</Badge> : <Badge>Unverified</Badge>}
+        </Notice>
+      )}
+      {sub === 'code' && (
+        <div className="space-y-4 p-4">
+          {verified ? (
+            <>
+              <div className="flex items-center gap-2 text-sm font-medium"><FaCheckCircle className="text-success" /> Contract Source Code Verified <Badge tone={verified.matchType === 'full' ? 'success' : 'warning'}>{verified.matchType === 'full' ? 'Exact Match' : 'Partial Match'}</Badge></div>
+              <div className="grid gap-x-8 gap-y-2 rounded-lg border border-line p-4 text-sm md:grid-cols-2">
+                <div><span className="text-muted">Contract Name:</span> <span className="font-medium">{verified.name}</span></div>
+                <div><span className="text-muted">Optimization Enabled:</span> {verified.optimizationUsed ? `Yes with ${verified.runs} runs` : 'No'}</div>
+                <div><span className="text-muted">Compiler Version:</span> {verified.compilerVersion}</div>
+                <div><span className="text-muted">Other Settings:</span> {verified.evmVersion ?? 'default'} EVM version{verified.licenseType ? `, ${verified.licenseType} license` : ''}</div>
+                <div><span className="text-muted">Verified At:</span> <TimeAgo value={verified.verifiedAt} /></div>
               </div>
-              <div className="md:col-span-3 text-sm font-medium">
-                {formatEther(addr.balance)} ETH
+              <div>
+                <h3 className="mb-2 text-sm font-semibold">Contract Source Code (Solidity)</h3>
+                <SourceViewer files={verified.sourceFiles} />
               </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="text-gray-500 text-sm md:col-span-1 flex items-center gap-1">
-                ETH Value:
+              <div>
+                <div className="mb-2 flex items-center justify-between"><h3 className="text-sm font-semibold">Contract ABI</h3><CopyButton value={JSON.stringify(verified.abi)} label="Copy ABI" /></div>
+                <CodeBlock maxHeight="14rem">{JSON.stringify(verified.abi)}</CodeBlock>
               </div>
-              <div className="md:col-span-3 text-sm">
-                $0.00 <span className="text-gray-400 text-xs">(@ $3,094.84/ETH)</span>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="text-gray-500 text-sm md:col-span-1 flex items-center gap-1">
-                Token Holdings:
-              </div>
-              <div className="md:col-span-3 text-sm">
-                {/* Placeholder for token holdings */}
-                <div className="relative inline-block text-left">
-                  <span className="text-gray-700">$0.00 <span className="text-xs text-gray-500">(0 Tokens)</span></span>
+              {verified.constructorArguments && (
+                <div>
+                  <h3 className="mb-2 text-sm font-semibold">Constructor Arguments (ABI-encoded)</h3>
+                  <CodeBlock maxHeight="10rem">{verified.constructorArguments}</CodeBlock>
                 </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* More Info / Stats */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden mb-8">
-          <div className="p-4 border-b border-gray-200 bg-gray-50 font-bold text-sm text-gray-700">
-            More Info
-          </div>
-          <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <div className="text-gray-500 text-sm mb-1">Last Transaction Sent</div>
-              <div className="text-sm font-medium">
-                {stats.sentCount ? formatNumber(stats.sentCount) : "0"} txn
-              </div>
-            </div>
-            <div>
-              <div className="text-gray-500 text-sm mb-1">First Transaction Sent</div>
-              <div className="text-sm font-medium">
-                -
-              </div>
-            </div>
-          </div>
-        </div>
-
-
-        {/* Transaction History Section */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-          <div className="p-4 border-b border-gray-200 flex justify-between items-center">
-            <h2 className="font-bold text-gray-700 text-sm">Transactions</h2>
-            {/* Tabs could go here */}
-          </div>
-          <div className="p-4">
-            {data.transactions && data.transactions.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left">
-                  <thead>
-                    <tr className="border-b border-gray-200 text-gray-500 text-sm">
-                      <th className="p-2 font-semibold">Tx Hash</th>
-                      <th className="p-2 font-semibold">Block</th>
-                      <th className="p-2 font-semibold">Age</th>
-                      <th className="p-2 font-semibold">From</th>
-                      <th className="p-2 font-semibold">To</th>
-                      <th className="p-2 font-semibold text-right">Value</th>
-                      <th className="p-2 font-semibold text-right">Txn Fee</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.transactions.map((tx) => (
-                      <tr key={tx.hash} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                        <td className="p-2 font-mono text-sm text-[#0784c3]">
-                          <Link href={`/transaction/${tx.hash}`} className="hover:underline">
-                            {truncateHash(tx.hash)}
-                          </Link>
-                        </td>
-                        <td className="p-2 text-sm">
-                          <Link href={`/block/${tx.blockNumber}`} className="text-[#0784c3] hover:underline">
-                            {formatNumber(tx.blockNumber)}
-                          </Link>
-                        </td>
-                        <td className="p-2 text-sm text-gray-500">
-                          -
-                        </td>
-                        <td className="p-2 font-mono text-sm text-[#0784c3] break-all">
-                          {tx.from.toLowerCase() === addr.address.toLowerCase() ? (
-                            <span className="text-gray-700 font-normal">
-                              {truncateHash(tx.from)}
-                            </span>
-                          ) : (
-                            <Link href={`/address/${tx.from}`} className="hover:underline">
-                              {truncateHash(tx.from)}
-                            </Link>
-                          )}
-                        </td>
-                        <td className="p-2 font-mono text-sm break-all pt-3">
-                          <span className={`inline-flex items-center justify-center p-1 rounded-full text-[10px] w-12 border ${tx.from.toLowerCase() === addr.address.toLowerCase() ? 'bg-yellow-50 text-yellow-600 border-yellow-200' : 'bg-green-50 text-green-600 border-green-200'} mr-2 font-bold uppercase`}>
-                            {tx.from.toLowerCase() === addr.address.toLowerCase() ? 'OUT' : 'IN'}
-                          </span>
-                          {tx.to && tx.to.toLowerCase() === addr.address.toLowerCase() ? (
-                            <span className="text-gray-700">{truncateHash(tx.to)}</span>
-                          ) : (
-                            <Link href={`/address/${tx.to}`} className="text-[#0784c3] hover:underline">
-                              {tx.to ? truncateHash(tx.to) : "Contract Creation"}
-                            </Link>
-                          )}
-                        </td>
-                        <td className="p-2 text-right text-gray-700 text-sm">
-                          {formatEther(tx.value)} ETH
-                        </td>
-                        <td className="p-2 text-right text-gray-500 text-xs">
-                          {tx.gasUsed && tx.effectiveGasPrice ? formatEther(BigInt(tx.gasUsed) * BigInt(tx.effectiveGasPrice)) : "0"}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <div className="text-center text-gray-500 py-8">No transactions found.</div>
-            )}
-
-            {/* Pagination */}
-            {data.pagination && data.pagination.totalPages > 1 && (
-              <div className="mt-6 flex justify-between items-center text-sm text-gray-600">
-                <div>Page {data.pagination.page || 1} of {data.pagination.totalPages}</div>
-                <div className="flex gap-2">
-                  {(data.pagination.page || 1) > 1 && (
-                    <Link
-                      href={`/address/${address}?page=${(data.pagination.page || 1) - 1}`}
-                      className="px-3 py-1 bg-[#e9ecef] hover:bg-[#dee2e6] rounded text-[#0784c3] font-medium transition-colors"
-                    >
-                      &lt; Previous
-                    </Link>
-                  )}
-                  {(data.pagination.page || 1) < data.pagination.totalPages && (
-                    <Link
-                      href={`/address/${address}?page=${(data.pagination.page || 1) + 1}`}
-                      className="px-3 py-1 bg-[#e9ecef] hover:bg-[#dee2e6] rounded text-[#0784c3] font-medium transition-colors"
-                    >
-                      Next &gt;
-                    </Link>
-                  )}
+              )}
+              {verified.libraries && Object.keys(verified.libraries).length > 0 && (
+                <div>
+                  <h3 className="mb-2 text-sm font-semibold">Linked Libraries</h3>
+                  <ul className="text-sm">{Object.entries(verified.libraries).map(([k, v]) => <li key={k}>{k}: <AddressLink address={v} /></li>)}</ul>
                 </div>
-              </div>
-            )}
-
+              )}
+            </>
+          ) : (
+            <Notice tone="info">
+              Are you the contract creator? <Link className="link font-medium" href={`/verifyContract?a=${address}`}>Verify and Publish</Link> your contract source code today!
+            </Notice>
+          )}
+          <div>
+            <div className="mb-2 flex items-center justify-between"><h3 className="text-sm font-semibold">Deployed Bytecode ({formatNumber(overview.codeSize)} bytes)</h3><CopyButton value={bytecode ?? ''} label="Copy bytecode" /></div>
+            <CodeBlock maxHeight="14rem">{bytecode}</CodeBlock>
           </div>
         </div>
-
-      </main>
-      <Footer />
+      )}
+      {sub === 'read' && verified && <ReadContract address={address} abi={verified.abi} />}
+      {sub === 'write' && verified && <WriteContract address={address} abi={verified.abi} chainId={cid} />}
+      {sub === 'readProxy' && implementation && <ReadContract address={address} abi={implementation.abi} implementation={implementation.address} />}
+      {sub === 'writeProxy' && implementation && <WriteContract address={address} abi={implementation.abi} chainId={cid} />}
+      {(sub === 'readProxy' || sub === 'writeProxy') && !implementation && <EmptyState>Implementation contract is not verified.</EmptyState>}
     </div>
   );
 }
 
+export default async function AddressPage({ params, searchParams }) {
+  const { address: raw } = await params;
+  const sp = await searchParams;
+  if (!isAddress(raw)) notFound();
+  const address = raw.toLowerCase();
+  await dbConnect();
+  const o = await getAddressOverview(address);
+  const tab = sp.tab ?? 'txs';
+  const { page, limit } = parsePagination(sp, { defaultLimit: 25 });
+  const base = `/address/${address}`;
+  const pageParams = { tab, ps: limit };
+
+  let body = null;
+  let pagination = null;
+  if (tab === 'txs') {
+    const r = await listTransactions({ page, limit, address });
+    pagination = r.pagination;
+    body = <TransactionsTable transactions={r.transactions} owner={address} />;
+  } else if (tab === 'internal') {
+    const r = await listInternalTransactions({ page, limit, address });
+    pagination = r.pagination;
+    body = <InternalTxTable rows={r.internalTransactions} meta={r.meta} owner={address} />;
+  } else if (tab === 'erc20' || tab === 'nft') {
+    const r = await listTokenTransfers({ page, limit, address, type: tab === 'erc20' ? 'ERC20' : 'NFT' });
+    pagination = r.pagination;
+    body = <TokenTransfersTable transfers={r.transfers} meta={r.meta} owner={address} nft={tab === 'nft'} />;
+  } else if (tab === 'events') {
+    const r = await getAddressLogs(address, { page, limit });
+    pagination = r.pagination;
+    body = r.logs.length ? (
+      <Table>
+        <thead><tr><Th>Txn Hash</Th><Th>Block</Th><Th>Age</Th><Th>Method / Event</Th><Th>Logs</Th></tr></thead>
+        <tbody>
+          {r.logs.map((l) => (
+            <tr key={`${l.blockNumber}-${l.logIndex}`} className="align-top">
+              <Td><TxLink hash={l.txHash} /></Td>
+              <Td><BlockLink number={l.blockNumber} /></Td>
+              <Td className="text-muted"><TimeAgo value={l.timestamp} /></Td>
+              <Td><span className="hash text-xs">{l.decoded?.name ?? l.topic0?.slice(0, 10) ?? '(anonymous)'}</span></Td>
+              <Td className="whitespace-normal">
+                {l.decoded ? (
+                  <div className="hash max-w-xl text-xs">{l.decoded.signature}<div className="mt-1 text-muted">{l.decoded.args.map((a) => `${a.name}: ${typeof a.value === 'object' ? JSON.stringify(a.value) : a.value}`).join(' · ')}</div></div>
+                ) : (
+                  <div className="hash max-w-xl break-all text-xs">{[l.topic0, l.topic1, l.topic2, l.topic3].filter(Boolean).join(' ')}<div className="text-muted">{l.data}</div></div>
+                )}
+              </Td>
+            </tr>
+          ))}
+        </tbody>
+      </Table>
+    ) : <EmptyState>No events found</EmptyState>;
+  } else if (tab === 'withdrawals') {
+    const r = await listWithdrawals({ page, limit, address });
+    pagination = r.pagination;
+    body = r.withdrawals.length ? (
+      <Table>
+        <thead><tr><Th>Index</Th><Th>Block</Th><Th>Age</Th><Th>Validator</Th><Th align="right">Amount</Th></tr></thead>
+        <tbody>{r.withdrawals.map((w) => <tr key={w.index}><Td>{formatNumber(w.index)}</Td><Td><BlockLink number={w.blockNumber} /></Td><Td className="text-muted"><TimeAgo value={w.timestamp} /></Td><Td>{w.validatorIndex}</Td><Td align="right"><NativeAmount wei={w.amount} /></Td></tr>)}</tbody>
+      </Table>
+    ) : <EmptyState>No withdrawals</EmptyState>;
+  } else if (tab === 'mined') {
+    const r = await getMinedBlocks(address, { page, limit });
+    pagination = r.pagination;
+    body = r.blocks.length ? (
+      <Table>
+        <thead><tr><Th>Block</Th><Th>Age</Th><Th>Txn</Th><Th>Gas Used</Th><Th align="right">Reward</Th></tr></thead>
+        <tbody>{r.blocks.map((b) => <tr key={b.number}><Td><BlockLink number={b.number} /></Td><Td className="text-muted"><TimeAgo value={b.timestamp} /></Td><Td>{b.transactionCount}</Td><Td>{formatNumber(b.gasUsed)}</Td><Td align="right"><NativeAmount wei={b.priorityFees} maxFraction={6} /></Td></tr>)}</tbody>
+      </Table>
+    ) : <EmptyState>No produced blocks</EmptyState>;
+  } else if (tab === 'contract') {
+    const [verified, implementation, cid, bytecode] = await Promise.all([
+      getVerifiedContract(address),
+      o.proxy?.implementation ? getVerifiedContract(o.proxy.implementation) : null,
+      chainId(),
+      getClient().getCode({ address }).catch(() => null),
+    ]);
+    body = <ContractTab address={address} overview={o} sub={sp.sub ?? 'code'} verified={verified} implementation={implementation} cid={cid} bytecode={bytecode} />;
+  }
+
+  const erc20Holdings = o.holdings.filter((h) => h.tokenType === 'ERC20');
+  const nftHoldings = o.holdings.filter((h) => h.tokenType !== 'ERC20');
+  const exportKind = tab === 'internal' ? 'internal' : tab === 'erc20' || tab === 'nft' ? 'tokens' : 'transactions';
+
+  return (
+    <Container>
+      <PageHeader
+        icon={o.isContract ? <FaFileContract className="text-muted" /> : <FaUser className="text-muted" />}
+        title={
+          <span className="flex min-w-0 flex-wrap items-center gap-2">
+            {o.isContract ? 'Contract' : 'Address'} <span className="hash min-w-0 truncate text-base font-normal">{checksum(address)}</span> <CopyButton value={checksum(address)} />
+          </span>
+        }
+      >
+        {o.label && <Badge tone="primary">{o.label}</Badge>}
+        {o.verified && <Badge tone="success"><FaCheckCircle /> {o.verified.name}</Badge>}
+        {o.delegation && <Badge tone="warning" title="EIP-7702 delegated account">Delegated to {o.delegation.slice(0, 10)}…</Badge>}
+      </PageHeader>
+
+      <div className="mt-4 grid gap-4 lg:grid-cols-2">
+        <Card title="Overview">
+          <DetailRow label={`${config.nativeSymbol} Balance`}><NativeAmount wei={o.balance ?? '0'} /></DetailRow>
+          <DetailRow label={`${config.nativeSymbol} Value`}>{o.balanceUsd !== null ? <>{formatUsd(o.balanceUsd)} <span className="text-muted">(@ {formatUsd(o.price?.usd)}/{config.nativeSymbol})</span></> : <span className="text-muted">-</span>}</DetailRow>
+          <DetailRow label="Token Holdings">
+            {o.holdings.length ? (
+              <details className="group">
+                <summary className="cursor-pointer list-none rounded-md border border-line px-3 py-1.5 text-sm hover:border-primary">
+                  {erc20Holdings.length} ERC-20 · {nftHoldings.length} NFT holdings <span className="text-muted">▾</span>
+                </summary>
+                <ul className="scrollbar-thin mt-2 max-h-72 divide-y divide-line overflow-auto rounded-md border border-line">
+                  {o.holdings.map((h) => (
+                    <li key={`${h.token}-${h.tokenId}`} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
+                      <TokenLink address={h.token} info={h.tokenInfo} />
+                      <span className="shrink-0 text-xs">
+                        {h.tokenType === 'ERC20' ? <TokenAmount value={h.balance} decimals={h.tokenInfo?.decimals} symbol={h.tokenInfo?.symbol} /> : <>{h.balance} {h.tokenType === 'ERC1155' ? `of #${h.tokenId}` : 'NFT'}</>}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            ) : <span className="text-muted">No indexed token balances</span>}
+          </DetailRow>
+        </Card>
+        <Card title="More Info">
+          {o.label && <DetailRow label="Public Name Tag"><Badge tone="primary">{o.label}</Badge></DetailRow>}
+          {o.isContract ? (
+            <DetailRow label="Contract Creator">
+              {o.record?.creator ? (
+                <span className="flex flex-wrap items-center gap-1">
+                  <AddressLink address={o.record.creator} meta={o.creatorMeta} /> <span className="text-muted">at txn</span> <TxLink hash={o.record.creationTxHash} />
+                </span>
+              ) : <span className="text-muted">Not indexed</span>}
+            </DetailRow>
+          ) : (
+            <DetailRow label="Transactions Sent" hint="Account nonce (number of transactions sent).">
+              Latest nonce: {o.nonce ?? '-'}
+            </DetailRow>
+          )}
+          {o.token && <DetailRow label="Token Tracker"><TokenLink address={address} info={o.token} /> <Badge className="ml-1">{o.token.type}</Badge></DetailRow>}
+          <DetailRow label="First Txn Sent">{o.firstTx ? <span className="flex flex-wrap items-center gap-2"><TxLink hash={o.firstTx.hash} /> <span className="text-xs text-muted"><TimeAgo value={o.firstTx.timestamp} /></span></span> : <span className="text-muted">-</span>}</DetailRow>
+          <DetailRow label="Last Txn">{o.lastTx ? <span className="flex flex-wrap items-center gap-2"><TxLink hash={o.lastTx.hash} /> <span className="text-xs text-muted"><TimeAgo value={o.lastTx.timestamp} /></span></span> : <span className="text-muted">-</span>}</DetailRow>
+          {o.isContract && <DetailRow label="Bytecode Size">{formatNumber(o.codeSize)} bytes</DetailRow>}
+        </Card>
+      </div>
+
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+        <Tabs
+          active={tab}
+          tabs={[
+            { key: 'txs', label: 'Transactions', count: o.counts.transactions, href: base },
+            o.counts.internal ? { key: 'internal', label: 'Internal Txns', count: o.counts.internal, href: `${base}?tab=internal` } : null,
+            o.counts.tokenTransfers ? { key: 'erc20', label: 'Token Transfers (ERC-20)', href: `${base}?tab=erc20` } : null,
+            o.counts.tokenTransfers ? { key: 'nft', label: 'NFT Transfers', href: `${base}?tab=nft` } : null,
+            o.isContract ? { key: 'contract', label: o.verified ? 'Contract ✓' : 'Contract', href: `${base}?tab=contract` } : null,
+            o.isContract ? { key: 'events', label: 'Events', href: `${base}?tab=events` } : null,
+            o.counts.withdrawals ? { key: 'withdrawals', label: 'Withdrawals', count: o.counts.withdrawals, href: `${base}?tab=withdrawals` } : null,
+            o.counts.minedBlocks ? { key: 'mined', label: 'Produced Blocks', count: o.counts.minedBlocks, href: `${base}?tab=mined` } : null,
+          ]}
+        />
+        {['txs', 'internal', 'erc20', 'nft'].includes(tab) && (
+          <a href={`/api/address/${address}/export?kind=${exportKind}`} className="inline-flex items-center gap-1 text-xs text-muted hover:text-primary"><FaDownload /> Download CSV</a>
+        )}
+      </div>
+      <Card className="mt-3">
+        {pagination && pagination.totalPages > 1 && (
+          <div className="flex justify-end px-4 py-3"><Pagination base={base} params={pageParams} page={page} totalPages={Math.min(pagination.totalPages, Math.floor(10_000 / limit))} /></div>
+        )}
+        {body}
+      </Card>
+    </Container>
+  );
+}

@@ -38,7 +38,7 @@ This project adheres to a code of conduct that all contributors are expected to 
 
 2. **Set up environment variables**:
    ```bash
-   cp .example.env .env
+   cp .env.example .env
    # Edit .env with your configuration
    ```
 
@@ -84,6 +84,7 @@ This project adheres to a code of conduct that all contributors are expected to 
 3. **Test your changes**:
    ```bash
    npm run lint
+   npm test
    npm run build
    ```
 
@@ -158,7 +159,7 @@ docs: update README with deployment instructions
 ### Testing
 
 - Test your changes locally
-- Ensure the build passes: `npm run build`
+- Ensure lint, tests and the build pass: `npm run lint && npm test && npm run build`
 - Test API endpoints
 - Verify database operations
 

@@ -1,51 +1,21 @@
-import dbConnect, { Block, Transaction } from '@/lib/mongodb';
-import { NextResponse } from 'next/server';
+import { withApi, json, CACHE } from '@/lib/api';
+import { HttpError, isHash, parseBlockNumber, parsePagination } from '@/lib/validation';
+import { getBlock, getBlockTransactions, getBlockWithdrawals } from '@/lib/services/blocks';
 
-export async function GET(req, { params }) {
-  try {
-    await dbConnect();
-    const { number } = await params;
-    const blockNumber = parseInt(number, 10);
+export const dynamic = 'force-dynamic';
 
-    if (isNaN(blockNumber)) {
-      return NextResponse.json({ error: 'Invalid block number' }, { status: 400 });
-    }
-
-    const block = await Block.findOne({ number: blockNumber }).lean();
-
-    if (!block) {
-      return NextResponse.json({ error: 'Block not found' }, { status: 404 });
-    }
-
-    // Get transactions for this block
-    const transactions = await Transaction.find({ blockNumber })
-      .sort({ transactionIndex: 1 })
-      .lean();
-
-    // Get previous and next block numbers
-    const prevBlock = await Block.findOne({ number: { $lt: blockNumber } })
-      .sort({ number: -1 })
-      .select('number')
-      .lean();
-
-    const nextBlock = await Block.findOne({ number: { $gt: blockNumber } })
-      .sort({ number: 1 })
-      .select('number')
-      .lean();
-
-    return NextResponse.json({
-      block,
-      transactions,
-      navigation: {
-        previous: prevBlock?.number || null,
-        next: nextBlock?.number || null,
-      },
-    });
-  } catch (error) {
-    console.error('Block API error:', error);
-    return NextResponse.json(
-      { error: error.message || 'Internal server error' },
-      { status: 500 }
-    );
-  }
-}
+/** GET /api/block/:numberOrHash */
+export const GET = withApi(async (req, { params }) => {
+  const id = isHash(params.number) ? params.number.toLowerCase() : parseBlockNumber(params.number);
+  const data = await getBlock(id);
+  if (!data) throw new HttpError(404, 'Block not found');
+  const { page, limit } = parsePagination(new URL(req.url).searchParams, { defaultLimit: 50 });
+  const [txs, withdrawals] = data.source === 'db'
+    ? await Promise.all([getBlockTransactions(data.block.number, { page, limit }), getBlockWithdrawals(data.block.number)])
+    : [{ transactions: data.rpcTransactions, pagination: null }, []];
+  const deep = data.confirmations !== null && data.confirmations > 64;
+  return json(
+    { block: data.block, source: data.source, confirmations: data.confirmations, navigation: data.navigation, transactions: txs.transactions, pagination: txs.pagination, withdrawals },
+    { cache: deep ? CACHE.long : CACHE.short },
+  );
+});

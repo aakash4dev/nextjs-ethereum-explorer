@@ -1,677 +1,121 @@
-# Architecture & Technical Documentation
-
-This document provides detailed technical information about the Ethereum Explorer architecture, API endpoints, database schema, and advanced configuration.
-
----
-
-## 📡 API Endpoints
-
-### Indexer
-- `GET /api/indexer` - Get sync status
-- `POST /api/indexer` - Trigger manual sync
-
-### Data
-- `GET /api/data?limit=10&page=1` - Get latest blocks and transactions
-- `GET /api/stats` - Get overall statistics
-
-### Blocks
-- `GET /api/blocks?page=1&limit=20` - Get paginated blocks
-- `GET /api/block/[number]` - Get specific block with transactions
-
-### Transactions
-- `GET /api/transactions?page=1&limit=20&address=0x...` - Get paginated transactions
-- `GET /api/transaction/[hash]` - Get specific transaction
-
-### Addresses
-- `GET /api/address/[address]?page=1&limit=20` - Get address details with transactions
-
----
-
-## 🗂️ Database Schema
-
-### Blocks Collection
-
-```javascript
-{
-  number: Number,              // Block number (indexed, unique)
-  hash: String,                // Block hash (indexed, unique)
-  parentHash: String,           // Parent block hash (indexed)
-  timestamp: Date,              // Block timestamp (indexed)
-  miner: String,                // Miner address (indexed)
-  gasUsed: String,              // Gas used
-  gasLimit: String,             // Gas limit
-  baseFeePerGas: String,        // Base fee per gas (EIP-1559)
-  extraData: String,            // Extra data
-  difficulty: String,           // Block difficulty
-  totalDifficulty: String,      // Total difficulty
-  size: Number,                 // Block size in bytes
-  transactionCount: Number,    // Number of transactions
-  transactionsRoot: String,     // Transactions root
-  stateRoot: String,            // State root
-  receiptsRoot: String,         // Receipts root
-  sha3Uncles: String,          // SHA3 of uncles
-  nonce: String,               // Block nonce
-  mixHash: String,              // Mix hash
-  logsBloom: String,            // Logs bloom filter
-  indexedAt: Date,              // When block was indexed (indexed)
-  createdAt: Date,             // Document creation time
-  updatedAt: Date              // Document update time
-}
-```
-
-**Indexes:**
-- `number` (unique, ascending)
-- `hash` (unique, ascending)
-- `parentHash` (ascending)
-- `timestamp` (ascending)
-- `miner` (ascending)
-- `indexedAt` (ascending)
-
-### Transactions Collection
-
-```javascript
-{
-  hash: String,                 // Transaction hash (indexed, unique)
-  blockNumber: Number,          // Block number (indexed)
-  blockHash: String,            // Block hash (indexed)
-  transactionIndex: Number,     // Transaction index in block
-  from: String,                 // Sender address (indexed)
-  to: String,                   // Recipient address (indexed, nullable)
-  value: String,                // Value in wei
-  gas: String,                  // Gas limit
-  gasPrice: String,             // Gas price
-  maxFeePerGas: String,         // Max fee per gas (EIP-1559)
-  maxPriorityFeePerGas: String, // Max priority fee (EIP-1559)
-  nonce: Number,                // Transaction nonce (indexed)
-  input: String,                // Input data
-  status: Number,               // Status: 1 = success, 0 = failure (indexed)
-  contractAddress: String,      // Contract address if creation (indexed)
-  cumulativeGasUsed: String,    // Cumulative gas used
-  effectiveGasPrice: String,    // Effective gas price
-  gasUsed: String,              // Gas used
-  logsBloom: String,            // Logs bloom filter
-  type: Number,                 // Transaction type (0 = legacy, 2 = EIP-1559)
-  chainId: Number,              // Chain ID
-  v: String,                    // Signature v
-  r: String,                    // Signature r
-  s: String,                    // Signature s
-  indexedAt: Date,               // When transaction was indexed (indexed)
-  createdAt: Date,              // Document creation time
-  updatedAt: Date               // Document update time
-}
-```
-
-**Indexes:**
-- `hash` (unique, ascending)
-- `blockNumber` (ascending)
-- `blockHash` (ascending)
-- `from` (ascending)
-- `to` (ascending)
-- `status` (ascending)
-- `contractAddress` (ascending)
-- `nonce` (ascending)
-- `indexedAt` (ascending)
-
-### Addresses Collection
-
-```javascript
-{
-  address: String,              // Ethereum address (indexed, unique)
-  balance: String,              // Current balance in wei
-  transactionCount: Number,     // Total transaction count
-  firstSeen: Date,             // First seen timestamp
-  lastSeen: Date,              // Last seen timestamp
-  isContract: Boolean,          // Is contract address (indexed)
-  contractCode: String,         // Contract bytecode (if contract)
-  indexedAt: Date,             // When address was indexed (indexed)
-  createdAt: Date,              // Document creation time
-  updatedAt: Date               // Document update time
-}
-```
-
-**Indexes:**
-- `address` (unique, ascending)
-- `isContract` (ascending)
-- `indexedAt` (ascending)
-
-### Indexer States Collection
-
-```javascript
-{
-  key: String,                  // State key (default: "sync_state") (unique)
-  lastProcessedBlock: Number,   // Last processed block number (indexed)
-  lastSyncedAt: Date,          // Last sync timestamp
-  isSyncing: Boolean,          // Is currently syncing
-  syncError: String,           // Last sync error (if any)
-  totalBlocksIndexed: Number,  // Total blocks indexed
-  totalTransactionsIndexed: Number, // Total transactions indexed
-  createdAt: Date,              // Document creation time
-  updatedAt: Date               // Document update time
-}
-```
-
-**Indexes:**
-- `key` (unique, ascending)
-- `lastProcessedBlock` (ascending)
-
----
-
-## 🏗️ System Architecture
-
-### Component Overview
+# Architecture
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                    Frontend (Next.js)                    │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  │
-│  │   Homepage   │  │ Block Pages  │  │  Tx Pages    │  │
-│  └──────────────┘  └──────────────┘  └──────────────┘  │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  │
-│  │ Address Pages│  │ Search       │  │  Stats       │  │
-│  └──────────────┘  └──────────────┘  └──────────────┘  │
-└─────────────────────────────────────────────────────────┘
-                          │
-                          ▼
-┌─────────────────────────────────────────────────────────┐
-│              API Routes (Next.js API)                    │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐│
-│  │ /api/    │  │ /api/    │  │ /api/    │  │ /api/    ││
-│  │ indexer  │  │ blocks   │  │ trans    │  │ address  ││
-│  └──────────┘  └──────────┘  └──────────┘  └──────────┘│
-└─────────────────────────────────────────────────────────┘
-                          │
-                          ▼
-┌─────────────────────────────────────────────────────────┐
-│                    MongoDB Database                       │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐│
-│  │ Blocks   │  │Transact.  │  │ Addresses│  │ Indexer  ││
-│  │          │  │           │  │          │  │ State    ││
-│  └──────────┘  └──────────┘  └──────────┘  └──────────┘│
-└─────────────────────────────────────────────────────────┘
-                          ▲
-                          │
-┌─────────────────────────────────────────────────────────┐
-│              Background Sync Service                      │
-│  ┌────────────────────────────────────────────────────┐ │
-│  │  Indexer (src/lib/indexer.js)                      │ │
-│  │  - Fetches blocks from Ethereum RPC                │ │
-│  │  - Processes transactions                           │ │
-│  │  - Updates database                                 │ │
-│  └────────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────┘
-                          │
-                          ▼
-┌─────────────────────────────────────────────────────────┐
-│              Ethereum RPC Endpoint                        │
-│              (Web3.js via HTTP/WebSocket)                │
-└─────────────────────────────────────────────────────────┘
+            ┌──────────────┐  JSON-RPC (batched, retried, failover)  ┌──────────────────┐
+            │ EVM node(s)  │◀────────────────────────────────────────│ Indexer worker   │
+            │ eth_/debug_/ │                                          │ scripts/sync.js  │
+            │ trace_       │◀──────────┐                              └────────┬─────────┘
+            └──────────────┘           │ live reads (balances, code,           │ bulk upserts
+                                       │ eth_call, traces, fallbacks)          ▼
+┌─────────┐  HTML / JSON   ┌───────────┴───────────┐   queries    ┌──────────────────┐
+│ Browser │───────────────▶│ Next.js (App Router)  │─────────────▶│     MongoDB      │
+│ wallet  │                │ pages + /api routes   │              └──────────────────┘
+└─────────┘                │ solc worker threads   │──▶ binaries.soliditylang.org (cached)
+                           └───────────────────────┘──▶ CoinGecko, openchain/4byte (optional)
 ```
 
-### Data Flow
+Two processes share `src/lib`:
 
-1. **Indexing Flow:**
-   - Sync service calls `runIndexer()`
-   - Fetches blocks from Ethereum RPC
-   - Processes each block and its transactions
-   - Saves to MongoDB
-   - Updates indexer state
+| Process | Entry | Responsibility |
+|---|---|---|
+| Web | `next start` / `server.js` | Server-rendered pages, REST + Etherscan-compatible APIs, contract verification |
+| Worker | `scripts/sync.js` | Indexing, reorg handling, enrichment, daily statistics |
 
-2. **Frontend Flow:**
-   - User requests page
-   - Next.js server component fetches from API
-   - API queries MongoDB
-   - Data returned to frontend
-   - Rendered with React
+`src/lib` uses relative ESM imports (`./x.js`) so the same modules run under Next.js, plain Node (the worker) and `node:test`.
 
-3. **Search Flow:**
-   - User enters search query
-   - Frontend validates format
-   - Routes to appropriate page
-   - Page fetches data from API
-   - Displays results
+## Source layout
 
----
-
-## 🔧 Advanced Configuration
-
-### Indexer Configuration
-
-The indexer can be configured via environment variables:
-
-```env
-# Start from a specific block
-START_BLOCK=23756000
-
-# Process more blocks per cycle (if RPC allows)
-INDEXER_BATCH_SIZE=20
-
-# Sync more frequently
-SYNC_INTERVAL=3000
+```
+src/lib/
+  config.js            validated env configuration (single source of truth)
+  db.js, models.js     Mongo connection + schemas/indexes
+  rpc.js               viem client: batching, retries, failover, capability probing
+  indexer/
+    fetch.js           block + receipts (+ eth_getBlockReceipts) + traces
+    transform.js       pure: raw RPC payloads → documents (fees, logs, token transfers, ...)
+    traces.js          pure: callTracer / parity traces → flat frames, call trees
+    persist.js         idempotent bulk upserts; rollback for reorgs
+    enrich.js          token metadata, balances (Multicall3), NFT owners, contract detection
+    stats.js           daily aggregates for charts
+    index.js           batch loop, lock, reorg detection, continuous sync
+  verification/
+    compiler.js        compiler download/cache/sha256, worker-thread compilation
+    bytecode.js        pure: metadata/immutables/library handling, match type
+    verify.js          verification flow + Etherscan-style async jobs
+  services/            read models used by pages and API routes
+  decoder.js           calldata, logs, revert reasons
+  signatures*.js       selector dictionary (builtin → verified ABIs → remote)
+  api.js               route wrapper: errors, rate limit, cache headers
+src/app/               pages and /api route handlers
+src/components/        server UI primitives + client components
+workers/solc-worker.cjs  compiler worker thread
+scripts/               sync worker, db scripts, devnet seeding
 ```
 
-### Performance Tuning
-
-**For Fast RPC Endpoints:**
-```env
-INDEXER_BATCH_SIZE=50
-SYNC_INTERVAL=2000
-```
-
-**For Rate-Limited RPCs:**
-```env
-INDEXER_BATCH_SIZE=5
-SYNC_INTERVAL=10000
-```
-
-**For Initial Sync:**
-```env
-START_BLOCK=<recent_block_number>
-INDEXER_BATCH_SIZE=20
-```
-
----
-
-## 📊 Performance Considerations
-
-### Database Indexing
-
-The application creates indexes on:
-- Block numbers and hashes
-- Transaction hashes and block numbers
-- Address fields
-- Timestamps
-
-**Query Optimization:**
-- Use indexed fields in queries
-- Limit result sets with pagination
-- Use aggregation pipelines for complex queries
-
-### RPC Rate Limits
-
-- Adjust `INDEXER_BATCH_SIZE` based on your RPC provider's rate limits
-- Use a dedicated RPC endpoint for production
-- Consider using multiple RPC endpoints with failover
-- Implement request queuing for high-volume scenarios
-
-### MongoDB Optimization
-
-- Use MongoDB Atlas for production with appropriate instance size
-- Enable connection pooling
-- Monitor query performance and add indexes as needed
-- Use read replicas for read-heavy workloads
-- Implement caching for frequently accessed data
-
-### Frontend Optimization
-
-- Server-side rendering for initial page load
-- Client-side caching with Next.js cache
-- Pagination to limit data transfer
-- Lazy loading for images and components
-
----
-
-## 🎯 Local Development Usage
-
-### Starting from a Specific Block
-
-**Important**: Starting from block 0 (genesis) will take a very long time. For local testing, use a recent block:
-
-```env
-# In .env
-START_BLOCK=23756000  # Recent block (faster sync)
-```
-
-To find the current Ethereum block:
-```bash
-curl -X POST -H "Content-Type: application/json" \
-  --data '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}' \
-  https://ethereum-rpc.publicnode.com
-```
-
-### Adjusting Batch Size
-
-For faster syncing (if your RPC allows):
-
-```env
-INDEXER_BATCH_SIZE=20  # Process more blocks per cycle
-```
-
-### Checking Sync Status Locally
-
-```bash
-# Quick status check
-curl http://localhost:3000/api/indexer
-
-# Detailed stats
-curl http://localhost:3000/api/stats | python3 -m json.tool
-
-# View indexed blocks
-curl "http://localhost:3000/api/data?limit=10" | python3 -m json.tool
-```
-
-### Filtering Transactions by Address
-
-```bash
-curl "http://localhost:3000/api/transactions?address=0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"
-```
-
----
-
-## 🐛 Troubleshooting
-
-### Indexer Not Syncing
-```bash
-# 1. Check if MongoDB is running
-sudo systemctl status mongod  # Linux
-brew services list | grep mongodb  # macOS
-
-# 2. Test MongoDB connection
-mongosh mongodb://localhost:27017/ethereum_indexer --eval "db.stats()"
-
-# 3. Check RPC endpoint
-curl -X POST -H "Content-Type: application/json" \
-  --data '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}' \
-  https://ethereum-rpc.publicnode.com
-
-# 4. Check sync status
-curl http://localhost:3000/api/indexer
-
-# 5. Check server logs (Terminal 1 where npm run dev is running)
-```
-
-### Sync Service Error: "Cannot find package '@/lib'"
-**Fixed!** The issue was resolved by:
-- Adding `"type": "module"` to `package.json`
-- Changing import in `indexer.js` to use relative path `./mongodb.js`
-- Adding `dotenv` package for environment variable loading
-- Creating wrapper script `scripts/sync.js` to load env vars first
-
-If you still see this error:
-```bash
-npm install  # Reinstall dependencies
-npm run sync  # Try again
-```
-
-### Error: "Cast to Number failed for value '537n' (type bigint)"
-**Fixed!** This happens when Web3.js returns BigInt values. The indexer now converts BigInt to Number automatically.
-
-If you still see this error:
-```bash
-# Make sure you have the latest code
-git pull  # If using git
-npm install  # Reinstall dependencies
-npm run sync  # Restart sync
-```
-
-### "Indexer is already running" (Stuck State)
-The indexer state is stuck. Reset it:
-
-```bash
-# Reset the stuck state
-mongosh mongodb://localhost:27017/ethereum_indexer --eval "db.indexerstates.updateOne({ key: 'sync_state' }, { \$set: { isSyncing: false } })"
-
-# Then restart sync
-npm run sync
-```
-
-Or complete reset:
-```bash
-mongosh mongodb://localhost:27017/ethereum_indexer --eval "db.indexerstates.updateOne({ key: 'sync_state' }, { \$set: { lastProcessedBlock: -1, isSyncing: false } })"
-```
-
-### Slow Performance
-- Reduce `INDEXER_BATCH_SIZE` to 5-10 for public RPCs
-- Increase `SYNC_INTERVAL` to 10000 (10 seconds)
-- Use a dedicated RPC endpoint (Infura, Alchemy)
-- Check MongoDB is running locally and not on network
-
-### Missing Data
-```bash
-# Check what's in the database
-mongosh mongodb://localhost:27017/ethereum_indexer
-
-# Then run:
-db.blocks.countDocuments()
-db.transactions.countDocuments()
-db.indexerstates.findOne({ key: "sync_state" })
-
-# If needed, reset indexer state:
-db.indexerstates.updateOne(
-  { key: "sync_state" },
-  { $set: { lastProcessedBlock: -1, isSyncing: false } }
-)
-```
-
-### MongoDB Connection Issues
-```bash
-# Check if MongoDB is running
-sudo systemctl status mongod
-
-# Start MongoDB if not running
-sudo systemctl start mongod
-
-# Check MongoDB logs
-sudo tail -f /var/log/mongodb/mongod.log
-```
-
-### Reset Database (Fresh Start)
-
-**Option 1: Using NPM Script (Recommended)**
-```bash
-# Stop sync service first (Ctrl+C)
-npm run reset-db
-```
-
-**Option 2: Using MongoDB Shell**
-```bash
-# Delete all collections
-mongosh mongodb://localhost:27017/ethereum_indexer --eval "
-  db.blocks.deleteMany({});
-  db.transactions.deleteMany({});
-  db.addresses.deleteMany({});
-  db.indexerstates.deleteMany({});
-  print('✅ All data deleted');
-"
-
-# Reset indexer state to start from START_BLOCK
-mongosh mongodb://localhost:27017/ethereum_indexer --eval "
-  db.indexerstates.updateOne(
-    { key: 'sync_state' },
-    { \$set: { lastProcessedBlock: 14, isSyncing: false, totalBlocksIndexed: 0, totalTransactionsIndexed: 0 } }
-  );
-  print('✅ Indexer state reset');
-"
-```
-
-**Option 3: Drop Entire Database**
-```bash
-# WARNING: This deletes the entire database
-mongosh mongodb://localhost:27017/ethereum_indexer --eval "db.dropDatabase()"
-```
-
-**After Reset:**
-```bash
-# Restart sync service
-npm run sync
-```
-
----
-
-## 📝 Development
-
-### Project Structure
-```
-src/
-├── app/
-│   ├── api/              # API routes
-│   │   ├── indexer/      # Indexer endpoints
-│   │   ├── block/         # Block endpoints
-│   │   ├── blocks/        # Blocks list endpoint
-│   │   ├── transaction/   # Transaction endpoints
-│   │   ├── transactions/  # Transactions list endpoint
-│   │   ├── address/       # Address endpoints
-│   │   ├── data/          # Data aggregation endpoint
-│   │   └── stats/         # Statistics endpoint
-│   ├── address/           # Address pages
-│   ├── block/             # Block pages
-│   ├── transaction/       # Transaction pages
-│   ├── blocks/            # All blocks page
-│   ├── transactions/      # All transactions page
-│   └── components/        # React components
-└── lib/
-    ├── indexer.js         # Indexer logic
-    ├── mongodb.js         # Database models
-    └── sync-service.js    # Background sync service
-scripts/
-├── sync.js                # Sync service wrapper
-└── reset-database.js      # Database reset script
-```
-
-### Adding New Features
-
-1. **Update Database Schemas**
-   - Edit `src/lib/mongodb.js`
-   - Add new fields to existing schemas or create new schemas
-   - Add appropriate indexes
-
-2. **Add API Endpoints**
-   - Create new route file in `src/app/api/`
-   - Follow existing patterns for error handling
-   - Add pagination if returning lists
-
-3. **Create Frontend Pages**
-   - Add new page in `src/app/`
-   - Use server components for data fetching
-   - Follow existing UI patterns
-
-4. **Update Indexer**
-   - Modify `src/lib/indexer.js` if needed
-   - Add new data extraction logic
-   - Update address tracking if needed
-
-### Code Patterns
-
-**API Route Pattern:**
-```javascript
-import dbConnect, { Model } from '@/lib/mongodb';
-import { NextResponse } from 'next/server';
-
-export async function GET(req) {
-  try {
-    await dbConnect();
-    // Your logic here
-    return NextResponse.json({ data });
-  } catch (error) {
-    return NextResponse.json(
-      { error: error.message },
-      { status: 500 }
-    );
-  }
-}
-```
-
-**Server Component Pattern:**
-```javascript
-async function getData() {
-  const res = await fetch('/api/endpoint', { next: { revalidate: 10 } });
-  if (!res.ok) throw new Error('Failed to fetch');
-  return res.json();
-}
-
-export default async function Page() {
-  const data = await getData();
-  // Render component
-}
-```
-
----
-
-## 🔐 Security Considerations
-
-### Environment Variables
-- Never commit `.env` file to version control
-- Use strong MongoDB passwords
-- Rotate RPC API keys regularly
-- Use environment-specific configurations
-
-### API Security
-- Implement rate limiting for production
-- Add authentication for admin endpoints
-- Validate and sanitize all inputs
-- Use HTTPS in production
-
-### Database Security
-- Use MongoDB authentication
-- Whitelist IP addresses
-- Enable MongoDB encryption at rest
-- Regular backups
-
----
-
-## 📈 Scaling Considerations
-
-### Horizontal Scaling
-- Deploy multiple frontend instances
-- Use load balancer
-- Share MongoDB database
-- Separate sync service instances
-
-### Vertical Scaling
-- Increase MongoDB instance size
-- Use faster RPC endpoints
-- Increase batch sizes
-- Optimize database queries
-
-### Caching Strategy
-- Cache frequently accessed blocks
-- Cache address balances
-- Use Redis for session data
-- Implement CDN for static assets
-
----
-
-## 🔄 Monitoring & Logging
-
-### Key Metrics to Monitor
-- Blocks indexed per hour
-- Transactions indexed per hour
-- Sync lag (blocks behind)
-- API response times
-- Database query performance
-- Error rates
-
-### Logging
-- Indexer logs sync progress
-- API logs errors and slow queries
-- Frontend logs user interactions
-- Use structured logging for production
-
----
-
-## 🧪 Testing
-
-### Manual Testing
-- Test sync with different START_BLOCK values
-- Verify pagination works correctly
-- Test search functionality
-- Check error handling
-
-### Database Testing
-- Test with empty database
-- Test with large datasets
-- Verify indexes are used
-- Test concurrent access
-
----
-
-## 📚 Additional Resources
-
-- [Next.js Documentation](https://nextjs.org/docs)
-- [MongoDB Documentation](https://docs.mongodb.com/)
-- [Web3.js Documentation](https://web3js.readthedocs.io/)
-- [Ethereum JSON-RPC API](https://ethereum.org/en/developers/docs/apis/json-rpc/)
-
----
-
-For quick start and basic usage, see [README.md](README.md).
-
+## Indexing pipeline
+
+Each cycle (`runIndexer`):
+
+1. **Lock**: acquire a lease in `indexerstates` (`lockOwner`, `lockExpiresAt`). A crashed worker's lease simply expires, so the indexer can never stay stuck in a "syncing" state.
+2. **Range**: `from = lastProcessedBlock + 1`, `to = min(head - INDEXER_CONFIRMATIONS, from + INDEXER_BATCH_SIZE - 1)`.
+3. **Fetch**: blocks are fetched concurrently (`INDEXER_CONCURRENCY`): `eth_getBlockByNumber(n, true)`, receipts via `eth_getBlockReceipts` (falling back to per-transaction receipts), and traces via `debug_traceBlockByNumber` (`callTracer`) or `trace_block` (parity). `TRACE_MODE=auto` probes the node once.
+4. **Contiguity**: only the contiguous prefix of successfully fetched blocks is kept. A failure stops the batch; the next cycle retries, so **no block is ever skipped**.
+5. **Reorg check**: the first block's `parentHash` must equal the stored hash of `from - 1`, and every block must link to the previous one. On a mismatch the indexer walks back (up to `INDEXER_MAX_REORG_DEPTH`) to the common ancestor, deletes everything above it, re-reads token balances and NFT owners touched by orphaned blocks, and re-indexes.
+6. **Transform** (pure): transactions (fees, burnt fees, blob gas, method id), logs, ERC-20/721/1155 transfers (including `TransferBatch`), internal transactions (value transfers, CREATE/CREATE2, SELFDESTRUCT), withdrawals (gwei → wei), block burnt and priority fees, plus touched addresses and created contracts.
+7. **Persist**: children are upserted first and the block row last, so a block row means its content is complete. All writes are keyed upserts (`hash`, `blockNumber+logIndex`, …), so replays after crashes or reorgs are safe. First/last-seen use `$min`/`$max`.
+8. **Enrich**: `eth_getCode` for unknown transaction targets, token metadata (string and bytes32 `name`/`symbol`), `balanceOf` for touched holders (Multicall3 when deployed, batched `eth_call` otherwise), holder counts, and native balances, all pinned to the batch's last block.
+9. **Stats**: every `STATS_INTERVAL` the worker recomputes today and yesterday (and backfills missing days) into `dailystats`.
+
+## Data model (MongoDB)
+
+| Collection | Key | Notes |
+|---|---|---|
+| `blocks` | `number`, `hash` | gas, base fee, burnt/priority fees, blob gas, withdrawals root, … |
+| `transactions` | `hash` | indexes: `(from, block)`, `(to, block)`, `(block, index)`, `contractAddress`, `timestamp` |
+| `logs` | `(blockNumber, logIndex)` | `topic0..3` as separate indexed fields |
+| `tokentransfers` | `(blockNumber, logIndex, batchIndex)` | ERC-20/721/1155; indexes by token, from, to, type |
+| `tokens` | `address` | metadata, supply, holder count |
+| `tokenbalances` | `(token, holder, tokenId)` | current balances (zero rows deleted) |
+| `nftinstances` | `(token, tokenId)` | ERC-721 owner (guarded by a monotonic sequence) |
+| `internaltxes` | `(txHash, traceAddress)` | value-moving / creating frames only; full trees are fetched live |
+| `withdrawals` | `index` | beacon withdrawals |
+| `addresses` | `address` | balance, contract flag, creator, first/last seen |
+| `contracts` | `address` | verified sources, ABI, settings, match type |
+| `verificationjobs` | `guid` | Etherscan-style async jobs (TTL 7 days) |
+| `signatures` | `(hash, signature)` | selectors learned from verified ABIs and remote lookups |
+| `dailystats` | `date` | chart series |
+| `indexerstates` | `key` | cursor, lease, head, errors, reorg count |
+
+Wei and token amounts are decimal **strings** (uint256 does not fit a double); a `*Num` double is stored alongside where sorting or charting needs it. Gas quantities are numbers.
+
+In production `autoIndex` is disabled; run `npm run db:indexes` on deploy.
+
+## Read path
+
+Pages are React Server Components that call `src/lib/services/*` directly (no internal HTTP hop). API routes call the same services through `withApi` (validation, rate limiting, error mapping, cache headers). Blocks and transactions not yet indexed are served live from the node and flagged as "Live from node". Small TTL caches with request coalescing protect hot paths (head block, gas oracle, price, stats).
+
+## Contract verification
+
+1. Build a standard-JSON input (single file → one source; or the user's standard JSON with our output selection).
+2. Resolve the compiler (`list.json`), download `soljson` once, check its sha256, cache it, and compile in a **worker thread** (timeout, max 2 parallel).
+3. Compare the deployed runtime code with each candidate's `deployedBytecode`: mask immutables, link libraries (auto-detected from the on-chain code when not provided), handle library call protection. Identical bytes give a **full** match; identical bytes after masking the CBOR metadata (trailing and embedded in child creation code) give a **partial** match.
+4. Recover constructor arguments from the indexed creation transaction.
+5. Store sources, ABI and settings; learn function/event/error signatures for decoding everywhere.
+
+The Etherscan-compatible `verifysourcecode` action queues a job, returns a GUID, and `checkverifystatus` reports it, which is the flow Hardhat and Foundry use.
+
+## Security
+
+- No unauthenticated destructive endpoints (the old `/api/clear` was removed). `POST /api/indexer` requires `ADMIN_API_KEY` (constant-time comparison).
+- All path and query inputs are validated; pagination is capped (`API_MAX_PAGE_SIZE`, 10k result window).
+- Per-IP rate limiting; expensive endpoints (trace, export, verify) cost more.
+- Contract reads only encode ABI fragments from verified contracts; the Etherscan `proxy` module only allows read-only methods plus `eth_sendRawTransaction`.
+- CSV export neutralises spreadsheet formula injection.
+- Security headers (HSTS, frame denial, nosniff, referrer and permissions policies); `X-Powered-By` disabled.
+- Write Contract never touches keys: transactions are signed by the user's wallet (EIP-1193).
+
+## Scaling notes
+
+- Indexer throughput is bounded by the RPC. Raise `INDEXER_CONCURRENCY` / `INDEXER_BATCH_SIZE` on a dedicated node, and disable `TRACK_BALANCES` / `TRACK_TOKEN_BALANCES` / traces if the node can't keep up.
+- Web servers are stateless apart from in-process caches and rate-limit counters; for multiple replicas put a shared limiter (e.g. at the proxy/CDN) in front.
+- Counts on very large result sets are bounded (`boundedCount`) to keep pages fast.

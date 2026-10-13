@@ -1,68 +1,49 @@
 #!/usr/bin/env node
-
 /**
- * Wrapper script for sync service
- * Loads environment variables before importing modules
+ * Indexer worker: keeps MongoDB in sync with the chain and refreshes daily
+ * statistics. Run exactly one or more instances; the database lock guarantees
+ * only one indexes at a time (the others act as hot standbys).
+ *
+ *   npm run sync                 # continuous
+ *   npm run sync -- --once       # single batch then exit (cron style)
  */
+import './load-env.js';
 
-// Load environment variables synchronously before importing modules
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
-import { readFileSync } from 'fs';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-// Load .env synchronously
-const envPath = join(__dirname, '../.env');
-try {
-  const envContent = readFileSync(envPath, 'utf8');
-  envContent.split('\n').forEach(line => {
-    const trimmed = line.trim();
-    if (trimmed && !trimmed.startsWith('#')) {
-      const equalIndex = trimmed.indexOf('=');
-      if (equalIndex > 0) {
-        const key = trimmed.substring(0, equalIndex).trim();
-        let value = trimmed.substring(equalIndex + 1).trim();
-        // Remove quotes if present
-        if ((value.startsWith('"') && value.endsWith('"')) || 
-            (value.startsWith("'") && value.endsWith("'"))) {
-          value = value.slice(1, -1);
-        }
-        if (key && !process.env[key]) {
-          process.env[key] = value;
-        }
-      }
-    }
-  });
-  console.log('✅ Loaded environment variables from .env');
-} catch (error) {
-  console.error('❌ Error loading .env:', error.message);
-  console.error(`   Path: ${envPath}`);
-  console.error('   Please create .env file in the project root');
-  console.error('   You can copy from .example.env as a reference');
-  process.exit(1);
-}
-
-// Verify required variables
 if (!process.env.MONGODB_URI) {
-  console.error('❌ MONGODB_URI not found in .env');
+  console.error('MONGODB_URI is not set (see .env.example)');
   process.exit(1);
 }
-
 if (!process.env.ETHEREUM_RPC_URL) {
-  console.error('❌ ETHEREUM_RPC_URL not found in .env');
+  console.error('ETHEREUM_RPC_URL is not set (see .env.example)');
   process.exit(1);
 }
 
-// Now dynamically import and run the sync service
-// This ensures env vars are loaded before mongodb.js is evaluated
-(async () => {
-  try {
-    await import('../src/lib/sync-service.js');
-  } catch (error) {
-    console.error('Failed to start sync service:', error);
-    process.exit(1);
-  }
-})();
+const { runIndexer, startContinuousSync, stopContinuousSync, releaseLock } = await import('../src/lib/indexer/index.js');
+const { dbDisconnect } = await import('../src/lib/db.js');
 
+let shuttingDown = false;
+async function shutdown(signal) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log(`\nReceived ${signal}, finishing the current batch...`);
+  stopContinuousSync();
+  // Hard stop if the batch does not finish in time; the lock lease expires anyway.
+  setTimeout(() => process.exit(0), 30_000).unref();
+}
+process.on('SIGINT', () => shutdown('SIGINT'));
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+
+try {
+  if (process.argv.includes('--once')) {
+    const result = await runIndexer();
+    console.log(JSON.stringify(result));
+  } else {
+    await startContinuousSync();
+  }
+} catch (err) {
+  console.error('Indexer failed:', err);
+  process.exitCode = 1;
+} finally {
+  await releaseLock().catch(() => {});
+  await dbDisconnect().catch(() => {});
+}

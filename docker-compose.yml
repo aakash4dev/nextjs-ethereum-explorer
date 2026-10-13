@@ -1,0 +1,56 @@
+# Full stack: MongoDB + indexer worker + web server.
+#   cp .env.example .env   # set ETHEREUM_RPC_URL (and START_BLOCK)
+#   docker compose up -d --build
+services:
+  mongo:
+    image: mongo:8.0
+    restart: unless-stopped
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.runCommand({ping:1}).ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  migrate:
+    build: .
+    command: ["node", "scripts/create-indexes.js"]
+    env_file: .env
+    environment:
+      MONGODB_URI: mongodb://mongo:27017/explorer
+    depends_on:
+      mongo:
+        condition: service_healthy
+    restart: "no"
+
+  indexer:
+    build: .
+    command: ["node", "scripts/sync.js"]
+    env_file: .env
+    environment:
+      MONGODB_URI: mongodb://mongo:27017/explorer
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    healthcheck:
+      disable: true
+
+  web:
+    build: .
+    env_file: .env
+    environment:
+      MONGODB_URI: mongodb://mongo:27017/explorer
+    ports:
+      - "3000:3000"
+    volumes:
+      - solc-cache:/app/.solc-cache
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+volumes:
+  mongo-data:
+  solc-cache:

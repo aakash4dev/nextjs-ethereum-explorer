@@ -1,54 +1,12 @@
-import dbConnect, { Transaction, Block } from '@/lib/mongodb';
-import { NextResponse } from 'next/server';
+import { withApi, json, CACHE } from '@/lib/api';
+import { HttpError, normalizeHash } from '@/lib/validation';
+import { getTransaction } from '@/lib/services/transactions';
 
-export async function GET(req, { params }) {
-  try {
-    await dbConnect();
-    const { hash } = await params;
+export const dynamic = 'force-dynamic';
 
-    if (!hash || !hash.startsWith('0x')) {
-      return NextResponse.json({ error: 'Invalid transaction hash' }, { status: 400 });
-    }
-
-    const transaction = await Transaction.findOne({ hash }).lean();
-
-    if (!transaction) {
-      return NextResponse.json({ error: 'Transaction not found' }, { status: 404 });
-    }
-
-    // Get block details
-    const block = await Block.findOne({ number: transaction.blockNumber }).lean();
-
-    // Get previous and next transactions in the same block
-    const prevTx = await Transaction.findOne({
-      blockNumber: transaction.blockNumber,
-      transactionIndex: { $lt: transaction.transactionIndex },
-    })
-      .sort({ transactionIndex: -1 })
-      .select('hash')
-      .lean();
-
-    const nextTx = await Transaction.findOne({
-      blockNumber: transaction.blockNumber,
-      transactionIndex: { $gt: transaction.transactionIndex },
-    })
-      .sort({ transactionIndex: 1 })
-      .select('hash')
-      .lean();
-
-    return NextResponse.json({
-      transaction,
-      block,
-      navigation: {
-        previous: prevTx?.hash || null,
-        next: nextTx?.hash || null,
-      },
-    });
-  } catch (error) {
-    console.error('Transaction API error:', error);
-    return NextResponse.json(
-      { error: error.message || 'Internal server error' },
-      { status: 500 }
-    );
-  }
-}
+export const GET = withApi(async (_req, { params }) => {
+  const data = await getTransaction(normalizeHash(params.hash, 'transaction hash'));
+  if (!data) throw new HttpError(404, 'Transaction not found');
+  const deep = data.confirmations !== null && data.confirmations > 64;
+  return json(data, { cache: deep ? CACHE.long : CACHE.short });
+});

@@ -41,3 +41,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+scripts/devnet/out/
+.solc-cache/
+
+# next dev writes agent rule files
+AGENTS.md
+CLAUDE.md

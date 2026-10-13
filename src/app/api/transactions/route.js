@@ -1,50 +1,15 @@
-import dbConnect, { Transaction } from '@/lib/mongodb';
-import { NextResponse } from 'next/server';
+import { withApi, json, CACHE } from '@/lib/api';
+import { getParam, normalizeAddress, parseBlockNumber, parsePagination } from '@/lib/validation';
+import { listTransactions } from '@/lib/services/transactions';
 
-export async function GET(req) {
-  try {
-    await dbConnect();
+export const dynamic = 'force-dynamic';
 
-    const { searchParams } = new URL(req.url);
-    const limit = parseInt(searchParams.get('limit') || '20', 10);
-    const page = parseInt(searchParams.get('page') || '1', 10);
-    const skip = (page - 1) * limit;
-    const address = searchParams.get('address');
-    const blockNumber = searchParams.get('blockNumber');
-
-    const query = {};
-    if (address) {
-      query.$or = [
-        { from: address.toLowerCase() },
-        { to: address.toLowerCase() },
-      ];
-    }
-    if (blockNumber) {
-      query.blockNumber = parseInt(blockNumber, 10);
-    }
-
-    const transactions = await Transaction.find(query)
-      .sort({ blockNumber: -1, transactionIndex: -1 })
-      .limit(limit)
-      .skip(skip)
-      .lean();
-
-    const total = await Transaction.countDocuments(query);
-
-    return NextResponse.json({
-      transactions,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit),
-      },
-    });
-  } catch (error) {
-    console.error('Transactions API error:', error);
-    return NextResponse.json(
-      { error: error.message || 'Internal server error' },
-      { status: 500 }
-    );
-  }
-}
+/** GET /api/transactions?page=&limit=&address=&block= */
+export const GET = withApi(async (req) => {
+  const sp = new URL(req.url).searchParams;
+  const { page, limit } = parsePagination(sp);
+  const address = getParam(sp, 'address') ? normalizeAddress(getParam(sp, 'address')) : undefined;
+  const blockRaw = getParam(sp, 'block') ?? getParam(sp, 'blockNumber');
+  const block = blockRaw ? parseBlockNumber(blockRaw) : undefined;
+  return json(await listTransactions({ page, limit, address, block }), { cache: CACHE.short });
+});

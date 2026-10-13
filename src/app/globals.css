@@ -1,32 +1,123 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
-  --background: #f8f9fa;
-  /* Etherscan Light Grey */
-  --foreground: #212529;
-  /* Dark Text */
+  --bg: #f8f9fa;
+  --surface: #ffffff;
+  --surface-2: #f8f9fa;
+  --surface-3: #e9ecef;
+  --border: #e9ecef;
+  --border-strong: #dee2e6;
+  --text: #212529;
+  --muted: #6c757d;
   --primary: #0784c3;
-  /* Etherscan Link Blue */
-  --hero-bg: #111b36;
-  /* Dark Blue Hero */
+  --primary-hover: #0670a6;
+  --primary-soft: #e6f3fa;
+  --hero: #0b1530;
+  --success: #00a186;
+  --success-soft: #e6f6f3;
+  --danger: #dc3545;
+  --danger-soft: #fcebec;
+  --warning: #b78103;
+  --warning-soft: #fff6e0;
+  --code-bg: #f8f9fa;
+  --chart-1: #0784c3;
+  --chart-grid: #e9ecef;
+  color-scheme: light;
+}
+
+.dark {
+  --bg: #0b0f17;
+  --surface: #111827;
+  --surface-2: #0f1623;
+  --surface-3: #1f2937;
+  --border: #1f2937;
+  --border-strong: #2b3646;
+  --text: #e5e7eb;
+  --muted: #9ca3af;
+  --primary: #3ba7e8;
+  --primary-hover: #6cc0f2;
+  --primary-soft: #0f2a3d;
+  --hero: #070c1a;
+  --success: #2fd1b0;
+  --success-soft: #0d2b26;
+  --danger: #f87171;
+  --danger-soft: #3a1416;
+  --warning: #fbbf24;
+  --warning-soft: #33280b;
+  --code-bg: #0d1420;
+  /* validated against the dark surface (lightness band 0.48-0.67) */
+  --chart-1: #2f95d6;
+  --chart-grid: #1f2937;
+  color-scheme: dark;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-line: var(--border);
+  --color-line-strong: var(--border-strong);
+  --color-fg: var(--text);
+  --color-muted: var(--muted);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-soft: var(--primary-soft);
+  --color-hero: var(--hero);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-code: var(--code-bg);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  background: var(--bg);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-geist-sans), system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 0.9375rem;
+}
+
+a {
+  color: inherit;
+}
+
+.link {
+  color: var(--primary);
+}
+.link:hover {
+  color: var(--primary-hover);
+}
+
+.hash {
+  font-family: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.875em;
+}
+
+.scrollbar-thin {
+  scrollbar-width: thin;
+}
+
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }
