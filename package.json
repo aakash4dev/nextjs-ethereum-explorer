@@ -1,9 +1,9 @@
 {
-  "name": "ethereum-indexer",
-  "version": "0.1.0",
+  "name": "nextjs-ethereum-explorer",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Industrial-grade Ethereum blockchain explorer with real-time indexing, transaction tracking, and address analytics",
+  "description": "Production-grade, self-hostable EVM block explorer: indexer, Etherscan-compatible API, contract verification, gas tracker, tokens, NFTs and charts",
   "author": "Aakash Singh Rajput",
   "license": "MIT",
   "repository": {
@@ -12,36 +12,46 @@
   },
   "keywords": [
     "ethereum",
+    "evm",
     "blockchain",
     "explorer",
     "indexer",
+    "etherscan",
+    "contract-verification",
     "web3",
     "nextjs",
     "mongodb"
   ],
   "scripts": {
-    "dev": "next dev --turbopack",
+    "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint .",
+    "test": "node --test 'test/**/*.test.js'",
     "sync": "node scripts/sync.js",
-    "reset-db": "node scripts/reset-database.js --confirm"
+    "sync:once": "node scripts/sync.js --once",
+    "db:indexes": "node scripts/create-indexes.js",
+    "reset-db": "node scripts/reset-database.js --confirm",
+    "devnet:seed": "node scripts/devnet/seed.js"
   },
   "dependencies": {
-    "dotenv": "^16.4.5",
-    "mongoose": "^8.16.0",
-    "next": "^16.0.10",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
+    "abitype": "^1.2.3",
+    "dotenv": "^16.6.1",
+    "mongoose": "^8.24.5",
+    "next": "^16.4.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
     "react-icons": "^5.5.0",
-    "sweetalert2": "^11.22.1",
-    "web3": "^4.16.0"
+    "solc": "^0.8.37",
+    "viem": "^2.57.4"
   },
   "devDependencies": {
-    "@eslint/eslintrc": "^3",
-    "@tailwindcss/postcss": "^4",
+    "@tailwindcss/postcss": "^4.3.3",
     "eslint": "^9",
-    "eslint-config-next": "^16.0.10",
-    "tailwindcss": "^4"
+    "eslint-config-next": "^16.4.0",
+    "tailwindcss": "^4.3.3"
+  },
+  "engines": {
+    "node": ">=20.9.0"
   }
 }
