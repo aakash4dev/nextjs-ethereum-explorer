@@ -1,209 +1,171 @@
-# Ethereum Blockchain Explorer - Industrial Grade
+# EVM Block Explorer: Next.js + MongoDB
 
-A comprehensive, production-ready Ethereum blockchain explorer built with Next.js, MongoDB, and Web3.js. This industrial-grade explorer provides real-time blockchain indexing, comprehensive transaction tracking, address analytics, and a modern, professional user interface.
+A self-hostable, production-grade block explorer for Ethereum and any EVM chain: a resilient indexer, an Etherscan-style UI, a REST API, an **Etherscan-compatible API** (works with Hardhat/Foundry verification), **smart contract source verification**, a **gas tracker**, token and NFT tracking, internal transactions, charts and developer tools.
 
 🌐 **Live Demo**: [https://nextjs-ethereum-explorer.vercel.app/](https://nextjs-ethereum-explorer.vercel.app/)
 
 > **Note**: The live demo has sync disabled to manage database costs. For full functionality, run the explorer locally or deploy with your own database.
 
----
-
-## 🚀 Quick Start
-
-### Prerequisites
-- **Node.js** (v18 or higher)
-- **MongoDB** (local or Atlas)
-- **Ethereum RPC Endpoint** (public RPC or your own node)
-
-### Installation
-
-1. **Clone and install:**
-   ```bash
-   git clone https://github.com/aakash4dev/nextjs-ethereum-explorer.git
-   cd nextjs-ethereum-explorer
-   npm install
-   ```
-
-2. **Configure environment:**
-   ```bash
-   cp .example.env .env
-   ```
-   
-   Edit `.env` with your settings:
-   ```env
-   ETHEREUM_RPC_URL=https://ethereum-rpc.publicnode.com
-   MONGODB_URI=mongodb://localhost:27017/ethereum_indexer
-   START_BLOCK=23756000  # Recent block for faster sync
-   INDEXER_BATCH_SIZE=10
-   SYNC_INTERVAL=5000
-   ```
-
-3. **Setup MongoDB:**
-   
-   **Ubuntu/Debian:**
-   ```bash
-   curl -fsSL https://www.mongodb.org/static/pgp/server-7.0.asc | sudo gpg -o /usr/share/keyrings/mongodb-server-7.0.gpg --dearmor
-   echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-7.0.gpg ] https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/7.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-7.0.list
-   sudo apt-get update && sudo apt-get install -y mongodb-org
-   sudo systemctl start mongod && sudo systemctl enable mongod
-   ```
-   
-   **macOS:**
-   ```bash
-   brew tap mongodb/brew
-   brew install mongodb-community
-   brew services start mongodb-community
-   ```
-   
-   **Windows:** Download from [MongoDB Download Center](https://www.mongodb.com/try/download/community)
-   
-   **Or use MongoDB Atlas:** See [MongoDB Atlas setup guide](https://www.mongodb.com/cloud/atlas/register)
-
-4. **Run the application:**
-   
-   **Terminal 1 - Frontend:**
-   ```bash
-   npm run dev
-   ```
-   
-   **Terminal 2 - Indexer:**
-   ```bash
-   npm run sync
-   ```
-
-5. **Verify it's working:**
-   ```bash
-   curl http://localhost:3000/api/indexer
-   curl http://localhost:3000/api/stats
-   ```
-
-Visit [http://localhost:3000](http://localhost:3000) to see the explorer!
-
-### Screenshots
-
 <div align="center">
-  <h3>Video Walkthrough</h3>
-  <img src="./public/videos/walkthrough.webp" alt="Walkthrough Video" width="800" style="border-radius: 8px; margin: 10px;" />
-
-  <h3>Screenshots</h3>
-  
-  <p><strong>Homepage</strong></p>
-  <img src="./public/screenshots/home.png" alt="Homepage" width="800" style="border-radius: 8px; margin: 10px;" />
-
-  <p><strong>Transactions List</strong></p>
-  <img src="./public/screenshots/transactions.png" alt="Transactions List" width="800" style="border-radius: 8px; margin: 10px;" />
-
-  <p><strong>Transaction Details</strong></p>
-  <img src="./public/screenshots/transaction_detail.png" alt="Transaction Details" width="800" style="border-radius: 8px; margin: 10px;" />
-
-  <p><strong>Blocks List</strong></p>
-  <img src="./public/screenshots/blocks.png" alt="Blocks List" width="800" style="border-radius: 8px; margin: 10px;" />
-
-  <p><strong>Block Details</strong></p>
-  <img src="./public/screenshots/block_detail.png" alt="Block Details" width="800" style="border-radius: 8px; margin: 10px;" />
+  <img src="./public/screenshots/home.png" alt="Home page" width="800" />
 </div>
 
 ---
 
 ## ✨ Features
 
-- **Real-time Blockchain Indexing** - Continuous synchronization with configurable start block
-- **Comprehensive Data Tracking** - Blocks, transactions, addresses, and contract interactions
-- **Advanced Search** - Search by block number, transaction hash, or Ethereum address
-- **Address Analytics** - Balance tracking, transaction history, and statistics
-- **Modern UI** - Professional, dark-themed interface with real-time stats
-- **Production Ready** - Robust error handling, batch processing, and database optimization
+**Explorer**
+- Home dashboard: price, market cap, TPS, block time, gas, 14-day activity, latest blocks and transactions (auto-refreshing)
+- Blocks: fee recipient, rewards (priority fees), burnt fees, base fee, gas target, blob gas (EIP-4844), withdrawals (EIP-4895), consensus fields
+- Transactions: status with **decoded revert reasons**, confirmations, value/fee in fiat, EIP-1559 fee breakdown and savings, blob fees, type/nonce/position, access lists, EIP-7702 authorizations
+- **Decoded input data** (verified ABI → learned signatures → openchain/4byte), decoded **event logs**, **ERC-20/721/1155 transfers**, and a full **internal call trace** (`debug_traceTransaction` or `trace_transaction`)
+- Addresses: live balance and nonce, fiat value, token holdings, first/last transaction, contract creator, EIP-7702 delegation, name tags; tabs for transactions, internal txns, ERC-20 and NFT transfers, events, withdrawals and produced blocks; **CSV export**
+- Contracts: verified source viewer (multi-file), ABI, constructor arguments, linked libraries, bytecode, **Read / Write Contract** (writes go through the user's wallet), **proxy detection** (EIP-1967, beacon, EIP-1822, EIP-1167) with **Read/Write as Proxy**
+- Tokens: ERC-20 tracker, NFT collections, holders with share of supply, transfers, NFT inventory and ownership
+- Pending transactions (mempool), internal transactions, beacon withdrawals, top accounts, verified contracts
+- **Gas tracker**: low/average/high from `eth_feeHistory`, base-fee history, cost of common actions, top gas guzzlers and spenders
+- **Charts & statistics**: daily transactions, gas used and price, base fee, fees and burn, block time and size, active addresses, contracts deployed, token transfers, failed transactions
+- Search with autocomplete (addresses, tx/block hashes, block numbers, token names and symbols, contracts, name tags)
+- Developer tools: contract verification, input data decoder, unit converter, raw transaction broadcast, signature verification, API docs
+- Dark mode, responsive layout, accessible components, SEO metadata, sitemap and robots
 
-See [ROADMAP.md](ROADMAP.md) for detailed features and future plans.
+**Backend**
+- **Indexer worker**: concurrent block fetching, `eth_getBlockReceipts` with per-receipt fallback, traces, logs, token transfers, withdrawals; idempotent bulk upserts; **chain reorganisation detection and rollback**; lease-based lock (no stuck "already running"); never skips a block; token metadata (incl. bytes32 tokens), token balances via `balanceOf` (Multicall3 when available), NFT ownership, native balances, contract detection; daily statistics
+- **Contract verification**: Solidity single-file and standard-JSON input, any compiler version (downloaded from soliditylang.org, sha256-checked, cached), compilation in a worker thread, full/partial matches, immutables, library linking with auto-detection, embedded child metadata, constructor arguments recovered from the creation transaction
+- **Etherscan-compatible `/api`**: `account`, `contract` (incl. `verifysourcecode` / `checkverifystatus`), `transaction`, `block`, `logs`, `proxy`, `gastracker`, `stats`, `token`
+- REST API, rate limiting, input validation, cache headers, CORS, security headers, `/api/health` (DB, RPC, indexer lag), structured JSON logs
+- RPC failover across multiple endpoints, JSON-RPC batching and retries; live RPC fallback for blocks and transactions not indexed yet
+
+---
+
+## 🚀 Quick Start
+
+### Prerequisites
+- Node.js 20.9+ (22 recommended)
+- MongoDB 6+ (local, Docker or Atlas)
+- An Ethereum JSON-RPC endpoint (an archive node with `debug_`/`trace_` APIs enables internal transactions)
+
+### Local development
+
+```bash
+git clone https://github.com/aakash4dev/nextjs-ethereum-explorer.git
+cd nextjs-ethereum-explorer
+npm install
+cp .env.example .env          # set ETHEREUM_RPC_URL, MONGODB_URI, START_BLOCK
+npm run db:indexes            # create MongoDB indexes
+npm run dev                   # web UI on http://localhost:3000
+npm run sync                  # indexer worker (second terminal)
+```
+
+> On mainnet, set `START_BLOCK` to a recent block for a fast start; the indexer catches up and then follows the head.
+
+### Try it on a local devnet (no external services)
+
+```bash
+npx @foundry-rs/anvil --block-time 2       # local chain with tracing (or: anvil)
+# .env: ETHEREUM_RPC_URL=http://127.0.0.1:8545  START_BLOCK=0  PRICE_PROVIDER=off
+npm run devnet:seed                         # deploys sample ERC-20/721/1155, splitter, CREATE2 factory + activity
+npm run sync & npm run dev
+```
+
+`devnet:seed` also writes `scripts/devnet/out/standard-input.json`, which you can paste into **Verify Contract** (format: Standard-Json-Input, contract `contracts/Samples.sol:SampleToken`).
+
+### Docker
+
+```bash
+cp .env.example .env    # set ETHEREUM_RPC_URL and START_BLOCK
+docker compose up -d --build
+```
+
+Starts MongoDB, runs index creation, then the indexer worker and the web server (port 3000). The image runs `node server.js` (web) by default and `node scripts/sync.js` for the worker.
 
 ---
 
 ## 🔧 Configuration
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `START_BLOCK` | Block number to start indexing from | `0` |
-| `INDEXER_BATCH_SIZE` | Blocks processed per sync cycle | `10` |
-| `SYNC_INTERVAL` | Milliseconds between sync cycles | `5000` |
-| `ETHEREUM_RPC_URL` | Ethereum RPC endpoint | Required |
-| `MONGODB_URI` | MongoDB connection string | Required |
+All settings are environment variables; see [`.env.example`](.env.example) for the full, commented list. The most important:
+
+| Variable | Default | Description |
+|---|---|---|
+| `ETHEREUM_RPC_URL` | - | RPC URL(s), comma-separated for failover |
+| `MONGODB_URI` | - | MongoDB connection string |
+| `START_BLOCK` | `0` | First block to index |
+| `INDEXER_BATCH_SIZE` / `INDEXER_CONCURRENCY` | `10` / `4` | Blocks per batch / fetched in parallel |
+| `INDEXER_CONFIRMATIONS` | `0` | Stay N blocks behind the head |
+| `TRACE_MODE` | `auto` | `callTracer`, `parity` or `off` for internal transactions |
+| `TRACK_BALANCES` / `TRACK_TOKEN_BALANCES` | `true` | Refresh balances of touched accounts |
+| `NEXT_PUBLIC_CHAIN_NAME` / `NEXT_PUBLIC_NATIVE_SYMBOL` | `Ethereum` / `ETH` | Branding for other EVM chains |
+| `PRICE_PROVIDER` | `coingecko` | `off` for testnets and private chains |
+| `API_RATE_LIMIT_PER_MINUTE` | `120` | Per-IP API rate limit |
+| `ADMIN_API_KEY` | - | Enables `POST /api/indexer` (cron-driven indexing) |
+
+---
+
+## 🧩 APIs
+
+- **REST**: `/api/blocks`, `/api/block/{id}`, `/api/transactions`, `/api/transaction/{hash}`, `/api/address/{address}`, `/api/tokens`, `/api/gas`, `/api/charts/{metric}`, … (see `/apis` in the app)
+- **Etherscan-compatible**: `/api?module=account&action=txlist&address=…`, `module=contract&action=getabi`, `module=logs&action=getLogs`, …
+
+Verify from Hardhat:
+
+```js
+// hardhat.config.js
+etherscan: {
+  apiKey: { explorer: 'any' },
+  customChains: [{ network: 'explorer', chainId: 1, urls: { apiURL: 'https://your-explorer/api', browserURL: 'https://your-explorer' } }],
+}
+```
+
+or Foundry: `forge verify-contract <addr> src/Token.sol:Token --verifier etherscan --verifier-url https://your-explorer/api --etherscan-api-key any`.
 
 ---
 
 ## 🚀 Deployment
 
-### Vercel (Frontend)
-
-1. Push code to GitHub
-2. Import project in [Vercel](https://vercel.com)
-3. Add environment variables in **Settings → Environment Variables**:
-   - `MONGODB_URI` (MongoDB Atlas connection string)
-   - `ETHEREUM_RPC_URL`
-   - `START_BLOCK`
-   - `INDEXER_BATCH_SIZE`
-   - `SYNC_INTERVAL`
-4. Deploy
-
-**Note:** Vercel uses environment variables from its dashboard, not from `.env` file.
-
-### Background Sync Service
-
-Deploy the sync service separately (VPS, AWS EC2, etc.):
-```bash
-pm2 start src/lib/sync-service.js --name ethereum-indexer
-pm2 logs ethereum-indexer
-pm2 save
-pm2 startup
-```
+- **Web**: any Node host (`npm run build && npm start`), the Docker image, or Vercel. Set `NEXT_PUBLIC_SITE_URL`.
+- **Indexer**: a long-running process (`npm run sync`, the Docker `indexer` service, PM2 or systemd). You can run more than one instance; a database lease guarantees only one indexes at a time, so the others are hot standbys.
+- **Serverless only** (no long-running worker): set `ADMIN_API_KEY` and call `POST /api/indexer` with `Authorization: Bearer <key>` from a scheduler.
+- **Database**: run `npm run db:indexes` on each deploy (index builds are not triggered automatically in production).
+- **Monitoring**: point uptime checks at `/api/health` (returns 503 when the DB/RPC is down or the indexer lags by more than `HEALTH_MAX_BLOCK_LAG`). The `/status` page shows indexer progress, reorgs and errors.
+- Upgrading from v0.x: the schema changed; run `npm run reset-db` and re-index.
 
 ---
 
-## 🐛 Troubleshooting
+## 🧪 Development
 
-### Indexer Not Syncing
 ```bash
-# Check MongoDB
-sudo systemctl status mongod
-mongosh mongodb://localhost:27017/ethereum_indexer --eval "db.stats()"
-
-# Check sync status
-curl http://localhost:3000/api/indexer
+npm run lint      # ESLint (next/core-web-vitals)
+npm test          # unit tests (node:test): formatting, validation, block transform, traces, bytecode matching, decoding
+npm run build     # production build
 ```
 
-### Reset Database
-```bash
-npm run reset-db
-# Or manually:
-mongosh mongodb://localhost:27017/ethereum_indexer --eval "db.dropDatabase()"
-```
-
-### "Indexer is already running" (Stuck)
-```bash
-mongosh mongodb://localhost:27017/ethereum_indexer --eval "db.indexerstates.updateOne({ key: 'sync_state' }, { \$set: { isSyncing: false } })"
-npm run sync
-```
-
-For detailed troubleshooting, see [ARCHITECTURE.md](ARCHITECTURE.md).
+See [ARCHITECTURE.md](ARCHITECTURE.md) for the design (indexer pipeline, reorg handling, data model, verification) and [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ---
 
-## 📚 Documentation
+## 📸 Screenshots
 
-- **[ARCHITECTURE.md](ARCHITECTURE.md)** - Detailed architecture, API endpoints, database schema
-- **[ROADMAP.md](ROADMAP.md)** - Current features and future roadmap
-- **[CONTRIBUTING.md](CONTRIBUTING.md)** - Contribution guidelines
-- **[VERIFY_SYNC.md](VERIFY_SYNC.md)** - Sync verification guide
-- **[SYNC_CHECK.md](SYNC_CHECK.md)** - Sync monitoring guide
+<div align="center">
+  <p><strong>Transaction details</strong></p>
+  <img src="./public/screenshots/transaction_detail.png" alt="Transaction details" width="800" />
+  <p><strong>Address with token holdings</strong></p>
+  <img src="./public/screenshots/address.png" alt="Address" width="800" />
+  <p><strong>Read Contract (dark mode)</strong></p>
+  <img src="./public/screenshots/contract_read.png" alt="Read contract" width="800" />
+  <p><strong>Gas tracker</strong></p>
+  <img src="./public/screenshots/gastracker.png" alt="Gas tracker" width="800" />
+  <p><strong>Blocks</strong></p>
+  <img src="./public/screenshots/blocks.png" alt="Blocks" width="800" />
+</div>
 
 ---
 
 ## 🛠️ Tech Stack
 
-- **Frontend**: Next.js 15 (App Router), React 19, Tailwind CSS
-- **Backend**: Next.js API Routes
+- **Frontend**: Next.js 16 (App Router, Server Components), React 19, Tailwind CSS 4
+- **Backend**: Next.js route handlers, Node.js worker
 - **Database**: MongoDB with Mongoose
-- **Blockchain**: Web3.js v4
-- **Icons**: React Icons
+- **Blockchain**: viem (RPC, ABI encoding/decoding), solc-js (verification)
 
 ---
 
@@ -223,7 +185,7 @@ For detailed troubleshooting, see [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ### Custom Blockchain Explorers
 
-This project demonstrates industrial-grade blockchain indexing and exploration. 
+This project demonstrates industrial-grade blockchain indexing and exploration.
 
 > **Note**: While this repository provides a robust and functional foundation, it is intended as a showcase of core capabilities. It is not a fully-fledged, enterprise-ready production deployment out of the box.
 
@@ -239,40 +201,13 @@ I am available for **paid engagement** to develop fully customized, production-g
 
 ## 📄 License
 
-This project is licensed under the MIT License.
-
-### Copyright
-
-Copyright (c) 2024 Aakash Singh Rajput
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-
----
+This project is licensed under the [MIT License](LICENSE). Copyright (c) 2024 Aakash Singh Rajput.
 
 ## 🤝 Contributing
 
 We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on how to contribute to this project.
 
----
-
 ## 🙏 Acknowledgments
 
-- Built with [Next.js](https://nextjs.org/)
-- Blockchain data via [Web3.js](https://web3js.readthedocs.io/)
-- Database powered by [MongoDB](https://www.mongodb.com/)
+- Built with [Next.js](https://nextjs.org/), [viem](https://viem.sh/) and [MongoDB](https://www.mongodb.com/)
+- Solidity compilers from [soliditylang.org](https://soliditylang.org/); signature data from [openchain.xyz](https://openchain.xyz/) and [4byte.directory](https://www.4byte.directory/)
