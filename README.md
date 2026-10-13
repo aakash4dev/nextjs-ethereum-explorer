@@ -150,12 +150,20 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for the design (indexer pipeline, reorg h
   <img src="./public/screenshots/transaction_detail.png" alt="Transaction details" width="800" />
   <p><strong>Address with token holdings</strong></p>
   <img src="./public/screenshots/address.png" alt="Address" width="800" />
+  <p><strong>Failed transaction with decoded revert reason (dark mode)</strong></p>
+  <img src="./public/screenshots/failed_transaction.png" alt="Failed transaction" width="800" />
+  <p><strong>Internal call trace</strong></p>
+  <img src="./public/screenshots/call_trace.png" alt="Call trace" width="800" />
   <p><strong>Read Contract (dark mode)</strong></p>
   <img src="./public/screenshots/contract_read.png" alt="Read contract" width="800" />
   <p><strong>Gas tracker</strong></p>
   <img src="./public/screenshots/gastracker.png" alt="Gas tracker" width="800" />
+  <p><strong>Charts &amp; statistics</strong></p>
+  <img src="./public/screenshots/charts.png" alt="Charts" width="800" />
   <p><strong>Blocks</strong></p>
   <img src="./public/screenshots/blocks.png" alt="Blocks" width="800" />
+  <p><strong>Transactions</strong></p>
+  <img src="./public/screenshots/transactions.png" alt="Transactions" width="800" />
 </div>
 
 ---
