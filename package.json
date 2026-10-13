@@ -31,6 +31,7 @@
     "sync": "node scripts/sync.js",
     "sync:once": "node scripts/sync.js --once",
     "db:indexes": "node scripts/create-indexes.js",
+    "check-rpc": "node scripts/check-rpc.js",
     "reset-db": "node scripts/reset-database.js --confirm",
     "devnet:seed": "node scripts/devnet/seed.js"
   },
