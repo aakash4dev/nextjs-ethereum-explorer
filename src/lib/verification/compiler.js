@@ -8,6 +8,7 @@
  * concurrency limit so they never block the HTTP event loop.
  */
 import { createHash } from 'node:crypto';
+import { createRequire } from 'node:module';
 import { existsSync, readFileSync } from 'node:fs';
 import { mkdir, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -18,14 +19,14 @@ import { createLogger } from '../logger.js';
 const log = createLogger('solc');
 const COMPILE_TIMEOUT_MS = 120_000;
 const MAX_PARALLEL = 2;
+const MAX_QUEUED = 8;
+const require = createRequire(import.meta.url);
 
 let bundledVersion = null;
 function getBundledVersion() {
   if (bundledVersion) return bundledVersion;
   try {
-    const pkgPath = path.join(/*turbopackIgnore: true*/ process.cwd(), 'node_modules', 'solc', 'package.json');
-    const { version } = JSON.parse(readFileSync(pkgPath, 'utf8'));
-    bundledVersion = version;
+    bundledVersion = require('solc').version().replace(/\.Emscripten\.clang$/, '');
   } catch {
     bundledVersion = null;
   }
@@ -48,10 +49,12 @@ async function fetchList() {
 export async function listCompilerVersions() {
   try {
     const list = await fetchList();
-    return list.builds
+    const bundled = getBundledVersion();
+    const versions = list.builds
       .filter((b) => !b.prerelease)
       .map((b) => `v${b.longVersion}`)
       .reverse();
+    return [...new Set([...(bundled ? [`v${bundled}`] : []), ...versions])];
   } catch (err) {
     log.warn('falling back to bundled compiler list', { err: err.message });
     const v = getBundledVersion();
@@ -61,7 +64,7 @@ export async function listCompilerVersions() {
 
 /** Accepts "0.8.20", "v0.8.20", "v0.8.20+commit.a1b79de6". */
 export function parseVersion(v) {
-  const m = String(v ?? '').trim().match(/^v?(\d+\.\d+\.\d+)(\+commit\.[0-9a-f]{8})?/);
+  const m = String(v ?? '').trim().match(/^v?(\d+\.\d+\.\d+)(\+commit\.[0-9a-f]{8})?(?:\.Emscripten\.clang)?$/);
   if (!m) return null;
   return { short: m[1], commit: m[2]?.slice(8) ?? null };
 }
@@ -70,7 +73,8 @@ async function resolveBuild(version) {
   const parsed = parseVersion(version);
   if (!parsed) throw new Error(`Invalid compiler version "${version}"`);
   const bundled = getBundledVersion();
-  if (bundled === parsed.short) return { bundled: true, longVersion: null };
+  const local = parseVersion(bundled);
+  if (local?.short === parsed.short && (!parsed.commit || local.commit === parsed.commit)) return { bundled: true, longVersion: bundled };
   const list = await fetchList();
   const build = list.builds.find((b) => b.version === parsed.short && !b.prerelease && (!parsed.commit || b.longVersion.endsWith(parsed.commit)));
   if (!build) throw new Error(`Unknown compiler version ${version}`);
@@ -82,8 +86,13 @@ const inflight = new Map();
 async function ensureSoljson(build) {
   // Runtime cache directory, not part of the build output.
   const dir = path.resolve(/*turbopackIgnore: true*/ process.cwd(), config.solcCacheDir);
+  if (!/^soljson-v[0-9a-z.+-]+\.js$/i.test(build.path)) throw new Error('Invalid compiler build path');
   const file = path.join(/*turbopackIgnore: true*/ dir, build.path);
-  if (existsSync(file)) return file;
+  if (existsSync(file)) {
+    const sha = `0x${createHash('sha256').update(readFileSync(file)).digest('hex')}`;
+    if (!build.sha256 || sha !== build.sha256) throw new Error('Cached compiler checksum mismatch');
+    return file;
+  }
   if (inflight.has(file)) return inflight.get(file);
   const p = (async () => {
     await mkdir(dir, { recursive: true });
@@ -92,7 +101,7 @@ async function ensureSoljson(build) {
     if (!res.ok) throw new Error(`compiler download failed (HTTP ${res.status})`);
     const buf = Buffer.from(await res.arrayBuffer());
     const sha = `0x${createHash('sha256').update(buf).digest('hex')}`;
-    if (build.sha256 && sha !== build.sha256) throw new Error('compiler checksum mismatch');
+    if (!build.sha256 || sha !== build.sha256) throw new Error('compiler checksum mismatch');
     const tmp = `${file}.${process.pid}.tmp`;
     await writeFile(tmp, buf);
     await rename(tmp, file);
@@ -106,6 +115,7 @@ async function ensureSoljson(build) {
 let running = 0;
 const queue = [];
 async function withSlot(fn) {
+  if (queue.length >= MAX_QUEUED) throw new Error('Compiler queue is full. Try again shortly.');
   if (running >= MAX_PARALLEL) await new Promise((r) => queue.push(r));
   running += 1;
   try {
@@ -148,6 +158,10 @@ export async function compileStandardJson(input, version) {
         worker.once('error', (err) => {
           clearTimeout(timer);
           reject(err);
+        });
+        worker.once('exit', (code) => {
+          clearTimeout(timer);
+          reject(new Error(`Compiler worker exited before returning a result (${code})`));
         });
       }),
   );

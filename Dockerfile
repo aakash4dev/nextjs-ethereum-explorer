@@ -9,7 +9,13 @@ RUN npm ci --no-audit --no-fund
 
 FROM node:22-bookworm-slim AS build
 WORKDIR /app
-ENV NEXT_TELEMETRY_DISABLED=1
+ARG NEXT_PUBLIC_CHAIN_NAME=Ethereum
+ARG NEXT_PUBLIC_NATIVE_SYMBOL=ETH
+ARG NEXT_PUBLIC_SITE_URL=http://localhost:3000
+ENV NEXT_TELEMETRY_DISABLED=1 \
+    NEXT_PUBLIC_CHAIN_NAME=${NEXT_PUBLIC_CHAIN_NAME} \
+    NEXT_PUBLIC_NATIVE_SYMBOL=${NEXT_PUBLIC_NATIVE_SYMBOL} \
+    NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL}
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npm run build && npm prune --omit=dev --no-audit --no-fund

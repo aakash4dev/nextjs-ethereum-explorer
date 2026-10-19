@@ -5,6 +5,7 @@ import { getClient } from '../rpc.js';
 import { serializeValue } from '../decoder.js';
 import { HttpError } from '../validation.js';
 import { NO_ID, cached, paginate } from './common.js';
+import { coerceContractArg, functionSignature } from '../contract-args.js';
 
 const ZERO_WORD = /^0x0*$/;
 const slotToAddress = (v) => (v && !ZERO_WORD.test(v) ? `0x${v.slice(-40)}`.toLowerCase() : null);
@@ -44,18 +45,6 @@ export async function listVerifiedContracts({ page = 1, limit = 25, q } = {}) {
   return { contracts: rows, pagination: paginate(total, page, limit) };
 }
 
-function coerceArg(type, value) {
-  if (type.endsWith(']')) {
-    const arr = typeof value === 'string' ? JSON.parse(value || '[]') : value;
-    const inner = type.slice(0, type.lastIndexOf('['));
-    return arr.map((v) => coerceArg(inner, v));
-  }
-  if (type.startsWith('uint') || type.startsWith('int')) return BigInt(String(value).trim());
-  if (type === 'bool') return value === true || String(value).trim().toLowerCase() === 'true' || value === '1';
-  if (type.startsWith('tuple')) return typeof value === 'string' ? JSON.parse(value) : value;
-  return typeof value === 'string' ? value.trim() : value;
-}
-
 /**
  * Execute a read-only (view/pure) function via eth_call. The ABI fragment is
  * taken from the verified contract (or its proxy implementation) so callers
@@ -65,15 +54,17 @@ export async function callReadFunction(address, { functionName, signature, args 
   const source = implementation ? await getVerifiedContract(implementation) : await getVerifiedContract(address);
   if (!source?.abi) throw new HttpError(404, 'Contract is not verified');
   const fragments = source.abi.filter((f) => f.type === 'function' && f.name === functionName && ['view', 'pure'].includes(f.stateMutability));
-  const fragment = signature ? fragments.find((f) => `${f.name}(${f.inputs.map((i) => i.type).join(',')})` === signature) : fragments[0];
+  if (!signature && fragments.length > 1) throw new HttpError(400, 'Overloaded function: signature is required');
+  const fragment = signature ? fragments.find((f) => functionSignature(f) === signature) : fragments[0];
   if (!fragment) throw new HttpError(400, 'Unknown read function');
-  let coerced;
+  let data;
   try {
-    coerced = fragment.inputs.map((inp, i) => coerceArg(inp.type, args[i]));
+    if (args.length !== fragment.inputs.length) throw new Error(`Expected ${fragment.inputs.length} arguments`);
+    const coerced = fragment.inputs.map((inp, i) => coerceContractArg(inp, args[i]));
+    data = encodeFunctionData({ abi: [fragment], functionName, args: coerced });
   } catch (err) {
-    throw new HttpError(400, `Invalid argument: ${err.message}`);
+    throw new HttpError(400, `Invalid argument: ${err.shortMessage ?? err.message}`);
   }
-  const data = encodeFunctionData({ abi: [fragment], functionName, args: coerced });
   try {
     const { data: ret } = await getClient().call({ to: address, data });
     const decoded = decodeFunctionResult({ abi: [fragment], functionName, data: ret ?? '0x' });

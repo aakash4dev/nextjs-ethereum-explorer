@@ -9,16 +9,17 @@ export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Search', robots: { index: false } };
 
 export default async function SearchPage({ searchParams }) {
-  const { q = '' } = await searchParams;
+  const { q = '', f = 'all' } = await searchParams;
+  const filter = ['address', 'token', 'block', 'tx'].includes(f) ? f : 'all';
   const term = String(q).slice(0, 128);
   await dbConnect();
-  const direct = term ? await resolveQuery(term) : null;
+  const direct = term ? await resolveQuery(term, filter) : null;
   if (direct) redirect(direct.path);
-  const results = term ? await suggest(term, 25) : [];
+  const results = term ? await suggest(term, 25, filter) : [];
   return (
     <Container className="max-w-4xl">
       <PageHeader title="Search results" subtitle={term ? `for "${term}"` : null} />
-      <div className="mt-4"><SearchBar /></div>
+      <div className="mt-4"><SearchBar initialQuery={term} initialFilter={filter} /></div>
       <Card className="mt-4">
         {results.length ? (
           <ul className="divide-y divide-line">

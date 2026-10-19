@@ -176,7 +176,7 @@ export async function refreshHolderCounts(tokens) {
   );
 }
 
-export async function refreshAddressBalances(addresses, blockNumber) {
+export async function refreshAddressBalances(addresses, blockNumber, { force = false } = {}) {
   const list = [...addresses];
   if (!list.length) return;
   const client = getClient();
@@ -190,7 +190,7 @@ export async function refreshAddressBalances(addresses, blockNumber) {
     if (balances[i] === null) return;
     ops.push({
       updateOne: {
-        filter: { address, $or: [{ balanceBlock: null }, { balanceBlock: { $lte: blockNumber } }] },
+        filter: { address, ...(!force ? { $or: [{ balanceBlock: null }, { balanceBlock: { $lte: blockNumber } }] } : {}) },
         update: { $set: { balance: balances[i].toString(), balanceNum: Number(balances[i]) / 1e18, balanceBlock: blockNumber } },
       },
     });

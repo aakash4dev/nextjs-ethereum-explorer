@@ -1,7 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { FaGasPump } from 'react-icons/fa';
 import { formatGasPrice } from '@/lib/format';
 
 const symbol = process.env.NEXT_PUBLIC_NATIVE_SYMBOL || 'ETH';
@@ -28,14 +27,14 @@ export default function HeaderTicker() {
   return (
     <div className="flex items-center gap-4">
       {data.price?.usd ? (
-        <span>
-          {symbol} Price: <span className="text-primary">${data.price.usd.toLocaleString('en-US', { maximumFractionDigits: 2 })}</span>
-          {typeof data.price.change24h === 'number' && <span className={data.price.change24h >= 0 ? 'ml-1 text-success' : 'ml-1 text-danger'}>({data.price.change24h.toFixed(2)}%)</span>}
+        <span className="hidden sm:inline">
+          {symbol} <span className="text-fg">${data.price.usd.toLocaleString('en-US', { maximumFractionDigits: 2 })}</span>
+          {typeof data.price.change24h === 'number' && <span className={data.price.change24h >= 0 ? 'ml-1 text-success' : 'ml-1 text-danger'}>{data.price.change24h >= 0 ? '+' : ''}{data.price.change24h.toFixed(2)}%</span>}
         </span>
       ) : null}
       {gwei !== null && (
         <Link href="/gastracker" className="flex items-center gap-1 hover:text-primary">
-          <FaGasPump /> Gas: <span className="text-primary">{gwei} Gwei</span>
+          Gas <span className="text-fg">{gwei} Gwei</span>
         </Link>
       )}
     </div>

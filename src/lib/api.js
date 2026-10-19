@@ -10,6 +10,7 @@ import { HttpError } from './validation.js';
 import { createLogger } from './logger.js';
 
 const log = createLogger('api');
+export { readBody } from './request-body.js';
 
 const replacer = (_k, v) => (typeof v === 'bigint' ? v.toString() : v);
 
@@ -19,7 +20,6 @@ export function json(data, { status = 200, cache = 'no-store', headers = {} } = 
     headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': cache, ...headers },
   });
 }
-
 /** Cache-Control presets. Indexed history is immutable once deep enough. */
 export const CACHE = {
   none: 'no-store',
@@ -95,17 +95,4 @@ export function withApi(handler, { cost = 1, db = true } = {}) {
       return json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : String(err?.message ?? err) }, { status: 500 });
     }
   };
-}
-
-export async function readBody(req) {
-  const type = req.headers.get('content-type') ?? '';
-  if (type.includes('application/json')) {
-    try {
-      return await req.json();
-    } catch {
-      throw new HttpError(400, 'Invalid JSON body');
-    }
-  }
-  if (type.includes('form')) return Object.fromEntries((await req.formData()).entries());
-  return {};
 }

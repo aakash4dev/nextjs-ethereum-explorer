@@ -3,53 +3,55 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --bg: #f8f9fa;
-  --surface: #ffffff;
-  --surface-2: #f8f9fa;
-  --surface-3: #e9ecef;
-  --border: #e9ecef;
-  --border-strong: #dee2e6;
-  --text: #212529;
-  --muted: #6c757d;
-  --primary: #0784c3;
-  --primary-hover: #0670a6;
-  --primary-soft: #e6f3fa;
-  --hero: #0b1530;
-  --success: #00a186;
-  --success-soft: #e6f6f3;
-  --danger: #dc3545;
-  --danger-soft: #fcebec;
-  --warning: #b78103;
-  --warning-soft: #fff6e0;
-  --code-bg: #f8f9fa;
-  --chart-1: #0784c3;
-  --chart-grid: #e9ecef;
+  --bg: #f3f1ec;
+  --surface: #f3f1ec;
+  --surface-2: #ece9e3;
+  --surface-3: #e4e0d9;
+  --border: #d6d1c8;
+  --border-strong: #262522;
+  --text: #22211e;
+  --muted: #706c65;
+  --primary: #087d91;
+  --primary-hover: #045e6e;
+  --primary-soft: #e1eeef;
+  --primary-contrast: #ffffff;
+  --hero: #f3f1ec;
+  --success: #14735f;
+  --success-soft: #e2efea;
+  --danger: #a33a36;
+  --danger-soft: #f3e5e1;
+  --warning: #946b17;
+  --warning-soft: #f3ead5;
+  --code-bg: #eae7e1;
+  --chart-1: #087d91;
+  --chart-grid: #d9d5cd;
+  --font-editorial: Georgia, "Times New Roman", Times, serif;
   color-scheme: light;
 }
 
 .dark {
-  --bg: #0b0f17;
-  --surface: #111827;
-  --surface-2: #0f1623;
-  --surface-3: #1f2937;
-  --border: #1f2937;
-  --border-strong: #2b3646;
-  --text: #e5e7eb;
-  --muted: #9ca3af;
-  --primary: #3ba7e8;
-  --primary-hover: #6cc0f2;
-  --primary-soft: #0f2a3d;
-  --hero: #070c1a;
-  --success: #2fd1b0;
-  --success-soft: #0d2b26;
-  --danger: #f87171;
-  --danger-soft: #3a1416;
-  --warning: #fbbf24;
-  --warning-soft: #33280b;
-  --code-bg: #0d1420;
-  /* validated against the dark surface (lightness band 0.48-0.67) */
-  --chart-1: #2f95d6;
-  --chart-grid: #1f2937;
+  --bg: #0b1220;
+  --surface: #101b2f;
+  --surface-2: #15233b;
+  --surface-3: #1b2d49;
+  --border: #2b4162;
+  --border-strong: #6885ab;
+  --text: #e6eef9;
+  --muted: #9cb0cd;
+  --primary: #6bbaff;
+  --primary-hover: #a7d4ff;
+  --primary-soft: #153459;
+  --primary-contrast: #071426;
+  --hero: #0b1220;
+  --success: #5dd8b0;
+  --success-soft: #10362f;
+  --danger: #ff9a9d;
+  --danger-soft: #3d2031;
+  --warning: #f4cc7b;
+  --warning-soft: #382e1b;
+  --code-bg: #0a1426;
+  --chart-1: #6bbaff;
+  --chart-grid: #283d5a;
   color-scheme: dark;
 }
 
@@ -73,23 +75,44 @@
   --color-warning: var(--warning);
   --color-warning-soft: var(--warning-soft);
   --color-code: var(--code-bg);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-ui);
   --font-mono: var(--font-geist-mono);
 }
 
 html {
   background: var(--bg);
+  scroll-behavior: smooth;
 }
 
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: var(--font-geist-sans), system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: var(--font-editorial);
   font-size: 0.9375rem;
+  line-height: 1.55;
+  text-rendering: optimizeLegibility;
 }
 
 a {
   color: inherit;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+::selection {
+  background: var(--primary);
+  color: #fff;
+}
+
+h1,
+h2,
+h3 {
+  letter-spacing: -0.025em;
 }
 
 .link {
@@ -99,9 +122,43 @@ a {
   color: var(--primary-hover);
 }
 
+.bg-primary.text-white {
+  color: var(--primary-contrast);
+}
+
 .hash {
   font-family: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 0.875em;
+}
+
+.ledger-kicker {
+  color: var(--muted);
+  font-family: var(--font-ui), system-ui, sans-serif;
+  font-size: 0.6875rem;
+  font-weight: 650;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.ledger-double-rule {
+  border-bottom: 4px double var(--border-strong);
+}
+
+/* Keep legacy route controls consistent with the ledger's square, printed feel. */
+.rounded-md,
+.rounded-lg,
+.rounded-xl {
+  border-radius: 2px;
+}
+
+.shadow-sm,
+.shadow-md,
+.shadow-lg {
+  box-shadow: none;
+}
+
+.ledger-primary-nav a {
+  color: var(--text);
 }
 
 .scrollbar-thin {

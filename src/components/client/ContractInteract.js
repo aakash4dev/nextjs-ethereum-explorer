@@ -2,16 +2,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { createWalletClient, custom, parseEther } from 'viem';
+import { coerceContractArg, functionSignature as sigOf } from '@/lib/contract-args';
 
-const sigOf = (f) => `${f.name}(${(f.inputs ?? []).map((i) => i.type).join(',')})`;
-
-function coerce(type, raw) {
-  const v = typeof raw === 'string' ? raw.trim() : raw;
-  if (type.endsWith(']') || type.startsWith('tuple')) return typeof v === 'string' ? JSON.parse(v || '[]', (_k, x) => x) : v;
-  if (type.startsWith('uint') || type.startsWith('int')) return BigInt(v);
-  if (type === 'bool') return v === true || v === 'true' || v === '1';
-  return v;
-}
 
 function Output({ result }) {
   if (!result) return null;
@@ -117,6 +109,22 @@ export function WriteContract({ address, abi, chainId }) {
   const [values, setValues] = useState({});
   const [txs, setTxs] = useState({});
 
+  useEffect(() => {
+    const provider = window.ethereum;
+    if (!provider?.on) return undefined;
+    const accountsChanged = (accounts) => setAccount(accounts[0] ?? null);
+    const chainChanged = () => {
+      setAccount(null);
+      setError('Wallet network changed. Reconnect to the explorer network before writing.');
+    };
+    provider.on('accountsChanged', accountsChanged);
+    provider.on('chainChanged', chainChanged);
+    return () => {
+      provider.removeListener?.('accountsChanged', accountsChanged);
+      provider.removeListener?.('chainChanged', chainChanged);
+    };
+  }, []);
+
   const wallet = () => {
     if (typeof window === 'undefined' || !window.ethereum) throw new Error('No injected wallet found. Install MetaMask or another EIP-1193 wallet.');
     return createWalletClient({ transport: custom(window.ethereum) });
@@ -126,14 +134,17 @@ export function WriteContract({ address, abi, chainId }) {
     setError(null);
     try {
       const [acc] = await wallet().requestAddresses();
-      setAccount(acc);
       if (chainId) {
         const current = await wallet().getChainId();
         if (current !== chainId) {
           await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: `0x${chainId.toString(16)}` }] });
         }
       }
+      if (!acc) throw new Error('No wallet account selected');
+      setAccount(acc);
+      setError(null);
     } catch (err) {
+      setAccount(null);
       setError(err.shortMessage ?? err.message);
     }
   };
@@ -143,7 +154,11 @@ export function WriteContract({ address, abi, chainId }) {
     setTxs((t) => ({ ...t, [key]: { pending: true } }));
     try {
       const vals = values[key] ?? {};
-      const args = (fn.inputs ?? []).map((inp, i) => coerce(inp.type, vals[i] ?? ''));
+      const current = await wallet().getChainId();
+      if (chainId && current !== chainId) throw new Error(`Wrong network. Connect to chain ${chainId} before writing.`);
+      const [selected] = await wallet().getAddresses();
+      if (!selected || selected.toLowerCase() !== account?.toLowerCase()) throw new Error('Wallet account changed. Reconnect before writing.');
+      const args = (fn.inputs ?? []).map((inp, i) => coerceContractArg(inp, vals[i] ?? ''));
       const hash = await wallet().writeContract({
         account,
         address,
@@ -151,7 +166,7 @@ export function WriteContract({ address, abi, chainId }) {
         functionName: fn.name,
         args,
         value: fn.stateMutability === 'payable' && vals.value ? parseEther(String(vals.value)) : undefined,
-        chain: null,
+        chain: chainId ? { id: chainId, name: 'Explorer network', nativeCurrency: { name: 'Native', symbol: 'ETH', decimals: 18 }, rpcUrls: { default: { http: [] } } } : null,
       });
       setTxs((t) => ({ ...t, [key]: { hash } }));
     } catch (err) {

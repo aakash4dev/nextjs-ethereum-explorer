@@ -6,18 +6,21 @@ export function cx(...c) {
 }
 
 export function Container({ children, className }) {
-  return <div className={cx('mx-auto w-full max-w-[1400px] px-4 md:px-6', className)}>{children}</div>;
+  return <div className={cx('mx-auto w-full max-w-[1200px] px-5 md:px-8', className)}>{children}</div>;
 }
 
 export function PageHeader({ title, subtitle, children, icon }) {
   return (
-    <div className="flex flex-col gap-2 border-b border-line py-5 md:flex-row md:items-center md:justify-between">
+    <div className="flex flex-col gap-6 border-b border-line py-9 md:flex-row md:items-end md:justify-between md:py-12">
       <div className="min-w-0">
-        <h1 className="flex items-center gap-2 text-lg font-semibold text-fg md:text-xl">
-          {icon}
+        <div className="ledger-kicker mb-3 flex items-center gap-2">
+          {icon && <span className="text-primary">{icon}</span>}
+          <span>On-chain record</span>
+        </div>
+        <h1 className="flex items-center gap-2 text-4xl font-semibold leading-none text-fg md:text-5xl">
           <span className="truncate">{title}</span>
         </h1>
-        {subtitle && <div className="mt-1 text-sm text-muted">{subtitle}</div>}
+        {subtitle && <div className="mt-4 max-w-3xl text-base leading-7 text-muted">{subtitle}</div>}
       </div>
       {children && <div className="flex flex-wrap items-center gap-2">{children}</div>}
     </div>
@@ -26,15 +29,15 @@ export function PageHeader({ title, subtitle, children, icon }) {
 
 export function Card({ children, className, title, action, footer, bodyClassName }) {
   return (
-    <section className={cx('overflow-hidden rounded-xl border border-line bg-surface shadow-sm', className)}>
+    <section className={cx('overflow-hidden border-y border-line bg-transparent', className)}>
       {(title || action) && (
-        <header className="flex items-center justify-between gap-2 border-b border-line px-4 py-3">
-          <h2 className="text-sm font-semibold text-fg">{title}</h2>
+        <header className="flex items-center justify-between gap-2 border-b border-line px-0 py-4">
+          <h2 className="text-xl font-semibold text-fg">{title}</h2>
           {action}
         </header>
       )}
       <div className={bodyClassName}>{children}</div>
-      {footer && <footer className="border-t border-line bg-surface-2 px-4 py-2.5 text-center text-xs">{footer}</footer>}
+      {footer && <footer className="border-t border-line px-0 py-3 text-right font-sans text-[11px] uppercase tracking-[0.12em]">{footer}</footer>}
     </section>
   );
 }
@@ -51,12 +54,12 @@ export function Hint({ text }) {
 /** Two-column label/value row used on detail pages. */
 export function DetailRow({ label, hint, children, className }) {
   return (
-    <div className={cx('grid grid-cols-1 gap-1 border-b border-line px-4 py-3 last:border-b-0 md:grid-cols-[minmax(200px,26%)_1fr] md:gap-4', className)}>
-      <div className="flex items-center text-sm text-muted">
+    <div className={cx('grid grid-cols-1 gap-2 border-b border-line px-0 py-4 last:border-b-0 md:grid-cols-[minmax(220px,27%)_1fr] md:gap-6', className)}>
+      <div className="flex items-center font-sans text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
         <Hint text={hint} />
-        {label}:
+        {label}
       </div>
-      <div className="min-w-0 break-words text-sm text-fg">{children}</div>
+      <div className="min-w-0 break-words text-[15px] text-fg">{children}</div>
     </div>
   );
 }
@@ -71,7 +74,7 @@ const BADGE = {
 
 export function Badge({ children, tone = 'default', className, title }) {
   return (
-    <span title={title} className={cx('inline-flex items-center gap-1 whitespace-nowrap rounded-md border px-1.5 py-0.5 text-xs font-medium', BADGE[tone], className)}>
+    <span title={title} className={cx('inline-flex items-center gap-1 whitespace-nowrap rounded-[2px] border px-2 py-0.5 font-sans text-[10px] font-semibold uppercase tracking-wider', BADGE[tone], className)}>
       {children}
     </span>
   );
@@ -93,7 +96,7 @@ export function Notice({ tone = 'info', children, className }) {
   };
   const Icon = tone === 'danger' || tone === 'warning' ? FaExclamationTriangle : FaInfoCircle;
   return (
-    <div role={tone === 'danger' ? 'alert' : 'status'} className={cx('flex items-start gap-2 rounded-lg border px-4 py-3 text-sm', styles[tone], className)}>
+    <div role={tone === 'danger' ? 'alert' : 'status'} className={cx('flex items-start gap-2 border border-l-2 px-4 py-3 text-sm', styles[tone], className)}>
       <Icon className={cx('mt-0.5 shrink-0', tone === 'danger' ? 'text-danger' : tone === 'warning' ? 'text-warning' : 'text-primary')} />
       <div className="min-w-0">{children}</div>
     </div>
@@ -107,7 +110,7 @@ export function EmptyState({ children = 'No records found', className }) {
 /** Link-based tabs (server rendered, shareable URLs). */
 export function Tabs({ tabs, active, className }) {
   return (
-    <nav className={cx('scrollbar-thin -mb-px flex gap-1 overflow-x-auto', className)} aria-label="Tabs">
+    <nav className={cx('scrollbar-thin -mb-px flex gap-7 overflow-x-auto border-b border-line', className)} aria-label="Tabs">
       {tabs.filter(Boolean).map((t) => (
         <Link
           key={t.key}
@@ -115,8 +118,8 @@ export function Tabs({ tabs, active, className }) {
           scroll={false}
           aria-current={t.key === active ? 'page' : undefined}
           className={cx(
-            'whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-medium transition-colors',
-            t.key === active ? 'bg-primary text-white' : 'bg-surface-3 text-fg hover:bg-primary-soft hover:text-primary',
+            'whitespace-nowrap border-b-2 px-0 py-3 font-sans text-xs font-semibold uppercase tracking-[0.08em] transition-colors',
+            t.key === active ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-primary',
           )}
         >
           {t.label}
@@ -137,7 +140,7 @@ function pageHref(base, params, page) {
 /** First / prev / "Page x of y" / next / last pagination (links). */
 export function Pagination({ base, params, page, totalPages, className }) {
   if (!totalPages || totalPages <= 1) return null;
-  const btn = 'rounded-md border border-line bg-surface px-2.5 py-1 text-xs font-medium';
+  const btn = 'border border-line bg-surface px-2.5 py-1 font-sans text-[11px] font-medium';
   const link = cx(btn, 'link hover:bg-primary-soft');
   const disabled = cx(btn, 'cursor-not-allowed text-muted opacity-60');
   return (
@@ -160,21 +163,21 @@ export function Table({ children, className, compact = false }) {
 }
 
 export function Th({ children, className, align }) {
-  return <th scope="col" className={cx('whitespace-nowrap border-b border-line bg-surface-2 px-4 py-2.5 text-xs font-semibold text-fg', align === 'right' && 'text-right', className)}>{children}</th>;
+  return <th scope="col" className={cx('whitespace-nowrap border-y border-line bg-transparent px-3 py-3 font-sans text-[10px] font-semibold uppercase tracking-[0.12em] text-muted', align === 'right' && 'text-right', className)}>{children}</th>;
 }
 
 export function Td({ children, className, align, colSpan }) {
-  return <td colSpan={colSpan} className={cx('whitespace-nowrap border-b border-line px-4 py-3 align-middle', align === 'right' && 'text-right', className)}>{children}</td>;
+  return <td colSpan={colSpan} className={cx('whitespace-nowrap border-b border-line px-3 py-3.5 align-middle', align === 'right' && 'text-right', className)}>{children}</td>;
 }
 
 export function Stat({ label, value, sub, icon }) {
   return (
     <div className="flex items-start gap-3">
-      {icon && <div className="mt-0.5 text-2xl text-muted">{icon}</div>}
+      {icon && <div className="mt-0.5 text-base text-primary">{icon}</div>}
       <div className="min-w-0">
-        <div className="text-xs font-medium uppercase tracking-wide text-muted">{label}</div>
-        <div className="mt-0.5 truncate font-medium text-fg">{value}</div>
-        {sub && <div className="text-xs text-muted">{sub}</div>}
+        <div className="font-sans text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">{label}</div>
+        <div className="mt-1 truncate text-xl font-semibold text-fg">{value}</div>
+        {sub && <div className="mt-0.5 text-xs text-muted">{sub}</div>}
       </div>
     </div>
   );
@@ -183,15 +186,15 @@ export function Stat({ label, value, sub, icon }) {
 export function Progress({ value, tone = 'primary' }) {
   const v = Math.max(0, Math.min(100, Number(value) || 0));
   return (
-    <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-3" role="progressbar" aria-valuenow={Math.round(v)} aria-valuemin={0} aria-valuemax={100}>
-      <div className={cx('h-full rounded-full', tone === 'danger' ? 'bg-danger' : tone === 'success' ? 'bg-success' : 'bg-primary')} style={{ width: `${v}%` }} />
+    <div className="h-0.5 w-full overflow-hidden bg-surface-3" role="progressbar" aria-valuenow={Math.round(v)} aria-valuemin={0} aria-valuemax={100}>
+      <div className={cx('h-full', tone === 'danger' ? 'bg-danger' : tone === 'success' ? 'bg-success' : 'bg-primary')} style={{ width: `${v}%` }} />
     </div>
   );
 }
 
 export function CodeBlock({ children, className, maxHeight = '24rem' }) {
   return (
-    <pre className={cx('hash scrollbar-thin overflow-auto whitespace-pre-wrap break-all rounded-lg border border-line bg-code p-3 text-xs text-fg', className)} style={{ maxHeight }}>
+    <pre className={cx('hash scrollbar-thin overflow-auto whitespace-pre-wrap break-all border border-line bg-code p-4 text-xs text-fg', className)} style={{ maxHeight }}>
       {children}
     </pre>
   );

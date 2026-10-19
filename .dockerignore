@@ -8,4 +8,8 @@ node_modules
 scripts/devnet/out
 coverage
 *.log
+.aws
+.devnet
+.agents
+.codex
 public/videos

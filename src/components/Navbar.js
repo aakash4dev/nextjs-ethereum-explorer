@@ -1,131 +1,66 @@
 import Link from 'next/link';
-import { FaChevronDown, FaEthereum, FaBars } from 'react-icons/fa';
 import HeaderTicker from './client/HeaderTicker';
 import ThemeToggle from './client/ThemeToggle';
 import SearchBar from './client/SearchBar';
 import config from '@/lib/config';
 import { Container } from './ui';
 
-export const NAV = [
-  { label: 'Home', href: '/' },
-  {
-    label: 'Blockchain',
-    items: [
-      { label: 'Transactions', href: '/txs' },
-      { label: 'Pending Transactions', href: '/txsPending' },
-      { label: 'Internal Transactions', href: '/txsInternal' },
-      { label: 'View Blocks', href: '/blocks' },
-      { label: 'Beacon Withdrawals', href: '/withdrawals' },
-      { label: 'Top Accounts', href: '/accounts' },
-      { label: 'Verified Contracts', href: '/contractsVerified' },
-    ],
-  },
-  {
-    label: 'Tokens',
-    items: [
-      { label: 'Top Tokens (ERC-20)', href: '/tokens' },
-      { label: 'Token Transfers (ERC-20)', href: '/tokentxns' },
-      { label: 'Top NFTs', href: '/nft-tokens' },
-      { label: 'NFT Transfers', href: '/nft-transfers' },
-    ],
-  },
-  {
-    label: 'Resources',
-    items: [
-      { label: 'Charts & Stats', href: '/charts' },
-      { label: 'Gas Tracker', href: '/gastracker' },
-      { label: 'Indexer Status', href: '/status' },
-      { label: 'API Documentation', href: '/apis' },
-    ],
-  },
-  {
-    label: 'Developers',
-    items: [
-      { label: 'Verify Contract', href: '/verifyContract' },
-      { label: 'Input Data Decoder', href: '/inputdatadecoder' },
-      { label: 'Unit Converter', href: '/unitconverter' },
-      { label: 'Broadcast Transaction', href: '/pushTx' },
-      { label: 'Verify Signature', href: '/verifySignature' },
-    ],
-  },
+const PRIMARY = [
+  ['Front page', '/'],
+  ['Blockchain', '/blocks'],
+  ['Tokens', '/tokens'],
+  ['Statistics', '/charts'],
+  ['Developers', '/apis'],
 ];
 
-function Dropdown({ item }) {
-  return (
-    <div className="group relative">
-      <button type="button" className="flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-medium text-fg hover:text-primary group-focus-within:text-primary" aria-haspopup="true">
-        {item.label} <FaChevronDown className="h-2.5 w-2.5 transition-transform group-hover:rotate-180" />
-      </button>
-      <div className="invisible absolute right-0 top-full z-50 min-w-56 translate-y-1 rounded-xl border border-line bg-surface p-1.5 opacity-0 shadow-lg transition-all group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100">
-        {item.items.map((s) => (
-          <Link key={s.href} href={s.href} className="block rounded-lg px-3 py-2 text-sm text-fg hover:bg-primary-soft hover:text-primary">
-            {s.label}
-          </Link>
-        ))}
-      </div>
-    </div>
-  );
-}
+const SECONDARY = [
+  ['Blocks', '/blocks'],
+  ['Transactions', '/txs'],
+  ['Pending', '/txsPending'],
+  ['Internal transactions', '/txsInternal'],
+  ['Verified contracts', '/contractsVerified'],
+  ['Top accounts', '/accounts'],
+  ['Gas tracker', '/gastracker'],
+];
 
 export default function Navbar() {
   return (
-    <header className="sticky top-0 z-40 border-b border-line bg-surface/95 backdrop-blur supports-[backdrop-filter]:bg-surface/80">
-      <div className="hidden border-b border-line md:block">
-        <Container className="flex h-10 items-center justify-between gap-4 text-xs text-muted">
-          <HeaderTicker />
-          <div className="w-full max-w-md">
-            <SearchBar />
+    <header className="bg-bg">
+      <Container>
+        <div className="flex min-h-9 items-center justify-between gap-4 border-b border-line font-sans text-[10px] font-semibold uppercase tracking-[0.11em] text-muted">
+          <div className="flex items-center gap-3">
+            <span>Live on-chain record</span>
+            <span className="hidden text-fg sm:inline">{config.chainName}{config.chainId ? ` · Chain ${config.chainId}` : ' network'}</span>
           </div>
-        </Container>
-      </div>
-      <Container className="flex h-14 items-center justify-between gap-3">
-        <Link href="/" className="flex items-center gap-2 text-lg font-semibold text-fg">
-          <FaEthereum className="h-6 w-6 text-primary" />
-          <span>{config.chainName} Explorer</span>
-        </Link>
-        <nav className="hidden items-center gap-0.5 lg:flex" aria-label="Main">
-          {NAV.map((item) =>
-            item.items ? (
-              <Dropdown key={item.label} item={item} />
-            ) : (
-              <Link key={item.href} href={item.href} className="rounded-lg px-3 py-2 text-sm font-medium text-fg hover:text-primary">
-                {item.label}
-              </Link>
-            ),
-          )}
-          <span className="ml-2">
+          <div className="flex items-center gap-4">
+            <HeaderTicker />
             <ThemeToggle />
-          </span>
-        </nav>
-        <div className="flex items-center gap-2 lg:hidden">
-          <ThemeToggle />
-          <details className="group relative">
-            <summary className="list-none rounded-lg border border-line p-2 text-fg" aria-label="Open menu">
-              <FaBars className="h-4 w-4" />
-            </summary>
-            <div className="absolute right-0 top-full z-50 mt-2 max-h-[80vh] w-72 overflow-auto rounded-xl border border-line bg-surface p-2 shadow-lg">
-              <div className="mb-2 md:hidden">
-                <SearchBar />
-              </div>
-              {NAV.map((item) =>
-                item.items ? (
-                  <div key={item.label} className="py-1">
-                    <div className="px-3 py-1 text-xs font-semibold uppercase text-muted">{item.label}</div>
-                    {item.items.map((s) => (
-                      <Link key={s.href} href={s.href} className="block rounded-lg px-3 py-1.5 text-sm hover:bg-primary-soft">
-                        {s.label}
-                      </Link>
-                    ))}
-                  </div>
-                ) : (
-                  <Link key={item.href} href={item.href} className="block rounded-lg px-3 py-1.5 text-sm font-medium hover:bg-primary-soft">
-                    {item.label}
-                  </Link>
-                ),
-              )}
-            </div>
-          </details>
+          </div>
         </div>
+
+        <div className="ledger-double-rule grid gap-5 py-5 lg:grid-cols-[1fr_minmax(360px,500px)] lg:items-center">
+          <Link href="/" className="text-[2rem] font-semibold leading-none tracking-[-0.045em] text-fg sm:text-[2.65rem]">
+            The {config.chainName} Ledger
+          </Link>
+          <SearchBar />
+        </div>
+
+        <nav className="ledger-primary-nav scrollbar-thin flex items-center gap-7 overflow-x-auto border-b border-line py-3 font-sans text-[11px] font-semibold uppercase tracking-[0.1em]" aria-label="Main navigation">
+          {PRIMARY.map(([label, href]) => (
+            <Link key={href} href={href} className="shrink-0 text-fg transition-colors hover:text-primary">
+              {label}
+            </Link>
+          ))}
+          <span className="ml-auto hidden shrink-0 text-muted md:inline">Independent network index</span>
+        </nav>
+
+        <nav className="scrollbar-thin flex items-center gap-6 overflow-x-auto border-b border-line py-2.5 font-sans text-[11px] text-muted" aria-label="Blockchain sections">
+          {SECONDARY.map(([label, href]) => (
+            <Link key={href} href={href} className="shrink-0 transition-colors hover:text-primary">
+              {label}
+            </Link>
+          ))}
+        </nav>
       </Container>
     </header>
   );

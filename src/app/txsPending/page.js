@@ -4,7 +4,7 @@ import AutoRefresh from '@/components/client/AutoRefresh';
 import { getPendingTransactions } from '@/lib/services/transactions';
 import { methodNames } from '@/lib/signatures';
 import { dbConnect } from '@/lib/db';
-import { formatGwei, formatNumber } from '@/lib/format';
+import { formatGasPrice, formatNumber } from '@/lib/format';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Pending Transactions' };
@@ -29,7 +29,7 @@ export default async function PendingPage() {
                   <Td><MethodBadge method={t.methodId ? names[t.methodId] ?? t.methodId : 'Transfer'} /></Td>
                   <Td>{t.nonce}</Td>
                   <Td>{formatNumber(t.gas)}</Td>
-                  <Td>{formatGwei(t.gasPrice, 3)} Gwei</Td>
+                  <Td>{formatGasPrice(t.gasPrice)} Gwei</Td>
                   <Td><AddressLink address={t.from} /></Td>
                   <Td>{t.to ? <AddressLink address={t.to} /> : <span className="text-muted">Contract Creation</span>}</Td>
                   <Td align="right"><NativeAmount wei={t.value} maxFraction={6} /></Td>

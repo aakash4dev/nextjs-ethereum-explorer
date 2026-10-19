@@ -1,6 +1,7 @@
 'use client';
-import { useSyncExternalStore } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
 import { FaMoon, FaSun } from 'react-icons/fa';
+import { THEME_COLORS } from '@/lib/theme';
 
 // The <html> class (set before paint by themeInitScript) is the source of truth.
 function subscribe(cb) {
@@ -13,8 +14,11 @@ const getServerSnapshot = () => false;
 
 export default function ThemeToggle() {
   const dark = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  useEffect(() => {
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', THEME_COLORS[dark ? 'dark' : 'light']);
+  }, [dark]);
   const toggle = () => {
-    const next = !dark;
+    const next = !getSnapshot();
     document.documentElement.classList.toggle('dark', next);
     try {
       localStorage.setItem('theme', next ? 'dark' : 'light');
@@ -23,11 +27,8 @@ export default function ThemeToggle() {
     }
   };
   return (
-    <button type="button" onClick={toggle} aria-label="Toggle dark mode" title="Toggle dark mode" className="rounded-lg border border-line p-2 text-muted transition-colors hover:text-primary">
-      {dark ? <FaSun className="h-4 w-4" /> : <FaMoon className="h-4 w-4" />}
+    <button type="button" onClick={toggle} aria-label="Toggle dark mode" aria-pressed={dark} title={dark ? 'Switch to light mode' : 'Switch to dark mode'} className="border-l border-line pl-4 text-muted transition-colors hover:text-primary">
+      {dark ? <FaSun className="h-3.5 w-3.5" /> : <FaMoon className="h-3.5 w-3.5" />}
     </button>
   );
 }
-
-/** Inline script that applies the saved theme before first paint (no flash). */
-export const themeInitScript = `(function(){try{var t=localStorage.getItem('theme');if(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme: dark)').matches)){document.documentElement.classList.add('dark')}}catch(e){}})();`;

@@ -47,16 +47,21 @@ export async function getBlock(id) {
     rpcTxs = live.transactions;
     source = 'rpc';
   }
-  const [head, prev, next, meta] = await Promise.all([
+  const [head, prev, next, meta, finalityHeads] = await Promise.all([
     safeHead(),
     Block.exists({ number: block.number - 1 }),
     Block.exists({ number: block.number + 1 }),
     addressMeta([block.miner]),
+    cached('finalityHeads', 4000, async () => {
+      const heads = await Promise.all(['safe', 'finalized'].map((tag) => rpc('eth_getBlockByNumber', [tag, false]).catch(() => null)));
+      return heads.map((b) => b?.number ? Number(BigInt(b.number)) : null);
+    }),
   ]);
   return {
     block: { ...block, minerMeta: meta[block.miner] ?? null },
     source,
     confirmations: head === null ? null : Math.max(0, head - block.number + 1),
+    finality: finalityHeads[1] !== null && block.number <= finalityHeads[1] ? 'finalized' : finalityHeads[0] !== null && block.number <= finalityHeads[0] ? 'safe' : finalityHeads.every((h) => h === null) ? 'unknown' : 'unfinalized',
     navigation: {
       previous: block.number > 0 ? block.number - 1 : null,
       next: head === null || block.number < head ? block.number + 1 : null,
