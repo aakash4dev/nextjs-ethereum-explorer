@@ -1,10 +1,15 @@
 # EVM Block Explorer
 
 A self-hosted Ethereum and EVM block explorer built with Next.js, MongoDB, and viem.
+<img src="./public/screenshots/home.png" alt="EVM Explorer home page" width="100%" />
+<table>
+  <tr>
+    <td><img src="./public/screenshots/blocks.png" alt="Indexed blocks" /></td>
+    <td><img src="./public/screenshots/transactions.png" alt="Indexed transactions" /></td>
+  </tr>
+</table>
+<img src="./public/screenshots/verified-contracts.png" alt="Deployed contracts with verified source code" width="100%" />
 
-[Live demo](https://nextjs-ethereum-explorer.vercel.app/) · [Architecture](ARCHITECTURE.md) · [Contributing](CONTRIBUTING.md)
-
-> **Proprietary software:** Copyright © 2024–2026 Aakash Singh Rajput. All rights reserved. This repository does not grant permission to use, copy, modify, deploy, or redistribute the code. See [LICENSE](LICENSE).
 
 ## Before you start
 
@@ -285,26 +290,7 @@ npm run verify:worker
 
 Run `npm run db:indexes` during deployment and monitor `/api/health`.
 
-## Screenshots
 
-### Home
-
-<img src="./public/screenshots/home.png" alt="EVM Explorer home page" width="100%" />
-
-<table>
-  <tr>
-    <td width="50%"><strong>Blocks</strong></td>
-    <td width="50%"><strong>Transactions</strong></td>
-  </tr>
-  <tr>
-    <td><img src="./public/screenshots/blocks.png" alt="Indexed blocks" /></td>
-    <td><img src="./public/screenshots/transactions.png" alt="Indexed transactions" /></td>
-  </tr>
-</table>
-
-### Deployed and verified contracts
-
-<img src="./public/screenshots/verified-contracts.png" alt="Deployed contracts with verified source code" width="100%" />
 
 ## Author
 
