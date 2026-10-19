@@ -83,3 +83,28 @@ test('persist is idempotent and rollback removes orphaned data', { skip }, async
   assert.equal(await models.TokenTransfer.countDocuments({ blockNumber: 2 }), 0);
   assert.equal((await models.NftInstance.findOne({ token: NFT, tokenId: '7' }).lean()).lastSeq, -1);
 });
+
+test('rollback removes orphan-only inventory, token balances and verified creations', { skip }, async () => {
+  const created = '0x5555555555555555555555555555555555555555';
+  const hash = pad(hx(0xabc003));
+  const b = block(3, pad(hx(1002)), [{ hash, from: A, to: null, value: '0x0', gas: hx(100_000), gasPrice: hx(2e9), input: '0x6000', nonce: '0x2', type: '0x0' }]);
+  const mint = (token, id, index) => ({ address: token, logIndex: hx(index), topics: [TOPICS.TRANSFER, pad('0'), pad(A), pad(hx(id))], data: '0x' });
+  const docs = transformBlock(b.raw, [{ transactionHash: hash, status: '0x1', contractAddress: created, gasUsed: hx(50_000), cumulativeGasUsed: hx(50_000), effectiveGasPrice: hx(2e9), logs: [mint(NFT, 9, 0), mint(created, 1, 1)] }]);
+  await persistBatch([docs]);
+  await models.Contract.create({ address: created, name: 'Orphan', matchType: 'full' });
+  await models.TokenBalance.create({ token: created, holder: A, tokenId: '1', tokenType: 'ERC721', balance: '1', balanceNum: 1, blockNumber: 3 });
+  assert.equal(await models.NftInstance.countDocuments({ token: NFT, tokenId: '9' }), 1);
+  assert.equal((await models.Address.findOne({ address: created }).lean()).isContract, true);
+
+  await rollbackAbove(1);
+  assert.equal(await models.NftInstance.countDocuments({ token: NFT, tokenId: '9' }), 0);
+  assert.equal(await models.NftInstance.countDocuments({ token: created }), 0);
+  assert.equal(await models.Token.countDocuments({ address: created }), 0);
+  assert.equal(await models.TokenBalance.countDocuments({ token: created }), 0);
+  assert.equal(await models.Contract.countDocuments({ address: created }), 0);
+  const address = await models.Address.findOne({ address: created }).lean();
+  assert.equal(address.isContract, false);
+  assert.equal(address.creationTxHash, undefined);
+  assert.equal(await models.Token.countDocuments({ address: NFT }), 1);
+  assert.equal(await models.NftInstance.countDocuments({ token: NFT, tokenId: '7' }), 1);
+});

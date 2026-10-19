@@ -212,25 +212,40 @@ export async function submitVerificationJob(rawRequest) {
   await dbConnect();
   const req = normalizeRequest(rawRequest);
   const guid = randomUUID().replace(/-/g, '') + Date.now().toString(36);
-  await VerificationJob.create({ guid, address: req.address, status: 'pending', request: { ...req, sourceCode: undefined } });
-  // Run in the background of this server process.
-  verifyContract(rawRequest)
-    .then((res) => VerificationJob.updateOne({ guid }, { $set: { status: 'pass', message: res.alreadyVerified ? 'Already Verified' : `Pass - Verified (${res.matchType} match)`, finishedAt: new Date() } }))
-    .catch((err) => {
-      if (!(err instanceof VerificationError)) log.error('verification job crashed', { guid, err });
-      return VerificationJob.updateOne({ guid }, { $set: { status: 'fail', message: `Fail - Unable to verify. ${err.message}`, finishedAt: new Date() } });
-    });
+  if (JSON.stringify(req).length > 5_500_000) throw new VerificationError('Verification request is too large');
+  await VerificationJob.create({ guid, address: req.address, status: 'pending', request: req });
+  // A durable worker recovers this request if the HTTP process is restarted.
+  processVerificationJob(guid).catch((err) => log.error('verification job execution failed', { guid, err }));
   return guid;
+}
+
+/** Claim one durable job. Expired leases can be recovered by another worker. */
+export async function processVerificationJob(guid) {
+  await dbConnect();
+  const owner = randomUUID();
+  const job = await VerificationJob.findOneAndUpdate({
+    status: 'pending', ...(guid ? { guid } : {}),
+    $or: [{ leaseExpiresAt: null }, { leaseExpiresAt: { $lt: new Date() } }],
+  }, { $set: { leaseOwner: owner, leaseExpiresAt: new Date(Date.now() + 10 * 60_000) }, $inc: { attempts: 1 } }, { new: true, sort: { createdAt: 1 } }).lean();
+  if (!job) return false;
+  let result;
+  try {
+    if (!job.request?.sourceCode) throw new VerificationError('Source input is missing; submit the verification again');
+    if (job.attempts > 3) throw new VerificationError('Verification failed repeatedly after worker restarts');
+    const verified = await verifyContract(job.request);
+    result = { status: 'pass', message: verified.alreadyVerified ? 'Already Verified' : `Pass - Verified (${verified.matchType} match)` };
+  } catch (err) {
+    if (!(err instanceof VerificationError)) log.error('verification job crashed', { guid: job.guid, err });
+    result = { status: 'fail', message: `Fail - Unable to verify. ${err.message}` };
+  }
+  await VerificationJob.updateOne({ guid: job.guid, leaseOwner: owner }, { $set: { ...result, finishedAt: new Date() }, $unset: { request: 1, leaseOwner: 1, leaseExpiresAt: 1 } });
+  return true;
 }
 
 export async function getVerificationJob(guid) {
   await dbConnect();
   const job = await VerificationJob.findOne({ guid: String(guid) }).lean();
   if (!job) return null;
-  // A job left pending by a restarted process is reported as failed.
-  if (job.status === 'pending' && Date.now() - new Date(job.createdAt).getTime() > 10 * 60_000) {
-    return { ...job, status: 'fail', message: 'Fail - Verification timed out' };
-  }
   return job;
 }
 

@@ -1,10 +1,11 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import Link from 'next/link';
 
 const input = 'mt-1 w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-primary';
 
 export default function VerifyForm({ initialAddress = '' }) {
+  const sourceId = useId();
   const [meta, setMeta] = useState({ versions: [], evmVersions: ['default'], licenses: [] });
   const [form, setForm] = useState({
     address: initialAddress,
@@ -26,10 +27,11 @@ export default function VerifyForm({ initialAddress = '' }) {
     fetch('/api/compilers')
       .then((r) => r.json())
       .then((d) => {
+        if (!d.versions?.length) throw new Error(d.error || 'No Solidity compilers are available');
         setMeta(d);
         setForm((f) => ({ ...f, compilerVersion: f.compilerVersion || d.versions?.[0] || '' }));
       })
-      .catch(() => {});
+      .catch((error) => setState({ busy: false, result: { ok: false, error: error.message } }));
   }, []);
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value }));
@@ -37,6 +39,10 @@ export default function VerifyForm({ initialAddress = '' }) {
   const onFile = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.size > 5_000_000) {
+      setState({ busy: false, result: { ok: false, error: 'Source file too large (max 5 MB)' } });
+      return;
+    }
     const text = await file.text();
     setForm((f) => ({ ...f, sourceCode: text }));
     try {
@@ -126,13 +132,13 @@ export default function VerifyForm({ initialAddress = '' }) {
 
       <div className="text-sm">
         <div className="flex items-center justify-between">
-          <span>{std ? 'Standard JSON Input' : 'Solidity Source Code'}</span>
+          <label htmlFor={sourceId}>{std ? 'Standard JSON Input' : 'Solidity Source Code'}</label>
           <label className="cursor-pointer text-xs text-primary">
             Upload {std ? '.json / build-info' : '.sol'} file
             <input type="file" accept={std ? '.json' : '.sol,.txt'} onChange={onFile} className="hidden" />
           </label>
         </div>
-        <textarea required value={form.sourceCode} onChange={set('sourceCode')} rows={14} spellCheck={false} className={`${input} hash`} placeholder={std ? '{ "language": "Solidity", "sources": { ... }, "settings": { ... } }' : '// SPDX-License-Identifier: MIT\npragma solidity ^0.8.0;\n...'} />
+        <textarea id={sourceId} required value={form.sourceCode} onChange={set('sourceCode')} rows={14} spellCheck={false} className={`${input} hash`} placeholder={std ? '{ "language": "Solidity", "sources": { ... }, "settings": { ... } }' : '// SPDX-License-Identifier: MIT\npragma solidity ^0.8.0;\n...'} />
       </div>
 
       <details className="text-sm">
@@ -156,7 +162,7 @@ export default function VerifyForm({ initialAddress = '' }) {
         <button disabled={state.busy} type="submit" className="rounded-lg bg-primary px-5 py-2 text-sm font-medium text-white hover:bg-primary-hover disabled:opacity-60">
           {state.busy ? 'Compiling & verifying…' : 'Verify and Publish'}
         </button>
-        <button type="reset" onClick={() => setForm((f) => ({ ...f, sourceCode: '', contractName: '', constructorArguments: '' }))} className="text-sm text-muted hover:text-primary">Reset</button>
+        <button disabled={state.busy} type="button" onClick={() => { setForm((f) => ({ ...f, sourceCode: '', contractName: '', constructorArguments: '' })); setLibs([{ name: '', address: '' }]); setState({ busy: false, result: null }); }} className="text-sm text-muted hover:text-primary">Reset</button>
       </div>
 
       {state.result && (

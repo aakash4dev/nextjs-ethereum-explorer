@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Production-grade, self-hostable EVM block explorer: indexer, Etherscan-compatible API, contract verification, gas tracker, tokens, NFTs and charts",
   "author": "Aakash Singh Rajput",
-  "license": "MIT",
+  "license": "UNLICENSED",
   "repository": {
     "type": "git",
     "url": "https://github.com/aakash4dev/nextjs-ethereum-explorer.git"
@@ -30,10 +30,14 @@
     "test": "node --test 'test/**/*.test.js'",
     "sync": "node scripts/sync.js",
     "sync:once": "node scripts/sync.js --once",
+    "verify:worker": "node scripts/verify-worker.js",
     "db:indexes": "node scripts/create-indexes.js",
     "check-rpc": "node scripts/check-rpc.js",
     "reset-db": "node scripts/reset-database.js --confirm",
-    "devnet:seed": "node scripts/devnet/seed.js"
+    "devnet:seed": "node scripts/devnet/seed.js",
+    "devnet:test": "node scripts/devnet/smoke.js",
+    "devnet": "node scripts/devnet/start.js",
+    "devnet:browser-fixture": "node scripts/devnet/browser-fixture.js"
   },
   "dependencies": {
     "abitype": "^1.2.3",
@@ -51,6 +55,11 @@
     "eslint": "^9",
     "eslint-config-next": "^16.4.0",
     "tailwindcss": "^4.3.3"
+  },
+  "overrides": {
+    "solc": {
+      "tmp": "0.2.7"
+    }
   },
   "engines": {
     "node": ">=20.9.0"

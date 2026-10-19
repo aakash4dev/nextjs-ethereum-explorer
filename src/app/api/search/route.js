@@ -8,6 +8,7 @@ export const dynamic = 'force-dynamic';
 export const GET = withApi(async (req) => {
   const sp = new URL(req.url).searchParams;
   const q = (getParam(sp, 'q') ?? '').slice(0, 128);
-  if (getParam(sp, 'resolve')) return json({ result: await resolveQuery(q) });
-  return json({ results: await suggest(q) }, { cache: 'public, max-age=10' });
+  const filter = ['address', 'token', 'block', 'tx'].includes(getParam(sp, 'f')) ? getParam(sp, 'f') : 'all';
+  if (getParam(sp, 'resolve')) return json({ result: await resolveQuery(q, filter) });
+  return json({ results: await suggest(q, 8, filter) }, { cache: 'public, max-age=10' });
 });

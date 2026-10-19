@@ -43,6 +43,7 @@ yarn-error.log*
 next-env.d.ts
 scripts/devnet/out/
 .solc-cache/
+.devnet/
 
 # next dev writes agent rule files
 AGENTS.md

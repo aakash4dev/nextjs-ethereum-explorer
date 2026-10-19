@@ -2,10 +2,10 @@ import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import { themeInitScript } from '@/components/client/ThemeToggle';
+import { THEME_COLORS, themeInitScript } from '@/lib/theme';
 import config from '@/lib/config';
 
-const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] });
+const geistSans = Geist({ variable: '--font-ui', subsets: ['latin'] });
 const geistMono = Geist_Mono({ variable: '--font-geist-mono', subsets: ['latin'] });
 
 const title = `${config.chainName} Explorer`;
@@ -33,20 +33,17 @@ export const metadata = {
 };
 
 export const viewport = {
-  themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
-    { media: '(prefers-color-scheme: dark)', color: '#111827' },
-  ],
+  themeColor: THEME_COLORS.light,
 };
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" data-scroll-behavior="smooth" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50 focus:rounded focus:bg-primary focus:px-3 focus:py-2 focus:text-white">
+      <body className={`${geistSans.variable} ${geistMono.variable}`}>
+        <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50 focus:bg-primary focus:px-3 focus:py-2 focus:text-white">
           Skip to content
         </a>
         <div className="flex min-h-screen flex-col">

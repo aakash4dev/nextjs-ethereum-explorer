@@ -5,12 +5,12 @@
  * value transfers, CREATE2 deployments and a reverted transaction.
  *
  *   anvil --block-time 2 &
- *   npm run devnet:seed            # uses ETHEREUM_RPC_URL (default http://127.0.0.1:8545)
+ *   npm run devnet:seed            # uses the isolated .env.devnet.example
  *
  * Writes scripts/devnet/out/deployments.json and the compiler standard-JSON
  * input (useful for trying contract verification).
  */
-import '../load-env.js';
+import './load-env.js';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -31,8 +31,10 @@ const KEYS = [
 const accounts = KEYS.map((k) => privateKeyToAccount(k));
 const [deployer, alice, bob, carol] = accounts;
 
-const publicClient = createPublicClient({ transport: http(rpcUrl) });
+if (!['localhost', '127.0.0.1', '[::1]'].includes(new URL(rpcUrl).hostname)) throw new Error('Devnet seeding requires a loopback RPC URL');
+const publicClient = createPublicClient({ transport: http(rpcUrl), pollingInterval: 100 });
 const chainId = await publicClient.getChainId();
+if (chainId !== 31337) throw new Error('Devnet seeding requires chain ID 31337');
 const chain = { id: chainId, name: 'devnet', nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 }, rpcUrls: { default: { http: [rpcUrl] } } };
 const wallet = (account) => createWalletClient({ account, chain, transport: http(rpcUrl) });
 

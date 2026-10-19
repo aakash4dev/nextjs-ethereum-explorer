@@ -13,12 +13,12 @@ import { randomUUID } from 'node:crypto';
 import os from 'node:os';
 import config from '../config.js';
 import { dbConnect } from '../db.js';
-import { Block, IndexerState, SCHEMA_VERSION } from '../models.js';
+import { Address, Block, IndexerState, SCHEMA_VERSION } from '../models.js';
 import { createLogger } from '../logger.js';
 import { fetchBlockBundle, getHeadNumber, getRawBlock, resolveTraceMode } from './fetch.js';
 import { transformBlock } from './transform.js';
 import { persistBatch, rollbackAbove } from './persist.js';
-import { enrichBatch, refreshNftOwners, refreshTokenBalances, refreshHolderCounts } from './enrich.js';
+import { enrichBatch, refreshNftOwners, refreshTokenBalances, refreshHolderCounts, refreshTokenMetadata, refreshAddressBalances } from './enrich.js';
 import { refreshDailyStats } from './stats.js';
 
 const log = createLogger('indexer');
@@ -72,18 +72,20 @@ async function setState(update) {
 /** Walk back from `from` until the stored hash matches the canonical chain. */
 async function findCommonAncestor(from) {
   const floor = Math.max(config.startBlock - 1, from - config.maxReorgDepth);
-  for (let n = from; n > floor; n--) {
+  for (let n = from; n >= Math.max(0, floor); n--) {
     const stored = await Block.findOne({ number: n }).select({ hash: 1 }).lean();
     if (!stored) continue;
     const canonical = await getRawBlock(n, false);
     if (canonical && canonical.hash.toLowerCase() === stored.hash) return n;
   }
-  return floor;
+  if (floor === config.startBlock - 1) return floor;
+  throw new Error(`Reorganisation exceeds INDEXER_MAX_REORG_DEPTH (${config.maxReorgDepth}); refusing to discard data without a known common ancestor`);
 }
 
 async function handleReorg(lastProcessed) {
   const ancestor = await findCommonAncestor(lastProcessed);
   log.warn('chain reorganisation detected; rolling back', { from: lastProcessed, to: ancestor, depth: lastProcessed - ancestor });
+  const balanceAddresses = await Address.find({ balanceBlock: { $gt: ancestor } }).select({ address: 1 }).lean();
   const orphans = await rollbackAbove(ancestor);
   await IndexerState.updateOne(
     { key: STATE_KEY },
@@ -91,14 +93,17 @@ async function handleReorg(lastProcessed) {
   );
   // Token state touched by orphaned blocks must be re-read from the canonical chain.
   try {
-    if (ancestor >= 0 && orphans.length) {
+    if (ancestor >= 0) {
+      if (config.trackBalances && balanceAddresses.length) await refreshAddressBalances(balanceAddresses.map((a) => a.address), ancestor, { force: true });
+      const tokens = [...new Set(orphans.map((t) => t.token))];
+      if (tokens.length) await refreshTokenMetadata(tokens, ancestor, { force: true });
       const pairs = orphans.flatMap((t) => [
         { token: t.token, holder: t.from, tokenId: t.tokenId, tokenType: t.tokenType },
         { token: t.token, holder: t.to, tokenId: t.tokenId, tokenType: t.tokenType },
       ]);
       if (config.trackTokenBalances) {
         await refreshTokenBalances(pairs, ancestor);
-        await refreshHolderCounts([...new Set(orphans.map((t) => t.token))]);
+        await refreshHolderCounts(tokens);
       }
       const nfts = orphans.filter((t) => t.tokenType === 'ERC721').map((t) => ({ token: t.token, tokenId: t.tokenId }));
       await refreshNftOwners(nfts, ancestor);
@@ -133,8 +138,15 @@ export async function runIndexer({ maxBlocks = config.batchSize } = {}) {
     if (last !== state.lastProcessedBlock) await setState({ lastProcessedBlock: last });
 
     if (last >= target) {
-      // Chain head moved backwards (node resync / deep reorg on a dev chain).
-      if (last > head) last = await handleReorg(Math.min(last, head));
+      // Check the indexed tip even without a new block: same-height reorgs
+      // otherwise remain invisible until the chain advances again.
+      const stored = last >= 0 ? await Block.findOne({ number: last }).select({ hash: 1 }).lean() : null;
+      const canonical = last >= 0 && last <= head ? await getRawBlock(last, false) : null;
+      if (last > head || (stored && canonical && stored.hash !== canonical.hash.toLowerCase())) {
+        last = await handleReorg(last);
+        await setState({ headBlock: head, lastSyncedAt: new Date(), syncError: null, traceMode });
+        return { status: 'reorg', rolledBackTo: last };
+      }
       await setState({ headBlock: head, lastSyncedAt: new Date(), syncError: null, traceMode });
       return { status: 'synced', head, lastProcessedBlock: last };
     }

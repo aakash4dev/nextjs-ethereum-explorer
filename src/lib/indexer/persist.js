@@ -1,10 +1,12 @@
 import {
   Address,
   Block,
+  Contract,
   InternalTx,
   Log,
   NftInstance,
   Token,
+  TokenBalance,
   TokenTransfer,
   Transaction,
   Withdrawal,
@@ -122,6 +124,28 @@ export async function rollbackAbove(ancestor) {
     InternalTx.deleteMany(filter),
     Withdrawal.deleteMany(filter),
   ]);
+  const newTokens = await Token.find({ firstSeenBlock: { $gt: ancestor } }).select({ address: 1 }).lean();
+  const addresses = newTokens.map((t) => t.address);
+  if (addresses.length) {
+    await Promise.all([
+      Token.deleteMany({ address: { $in: addresses } }),
+      TokenBalance.deleteMany({ token: { $in: addresses } }),
+      NftInstance.deleteMany({ token: { $in: addresses } }),
+    ]);
+  }
+  const orphanCreations = await Address.find({ creationBlock: { $gt: ancestor } }).select({ address: 1 }).lean();
+  if (orphanCreations.length) {
+    await Contract.deleteMany({ address: { $in: orphanCreations.map((a) => a.address) } });
+    await Address.updateMany({ creationBlock: { $gt: ancestor } }, { $set: { isContract: false, codeChecked: false }, $unset: { creator: 1, creationBlock: 1, creationTxHash: 1 } });
+  }
+  const nftKeys = [...new Map(orphanTransfers.filter((t) => t.tokenType !== 'ERC20').map((t) => [`${t.token}:${t.tokenId}`, { token: t.token, tokenId: t.tokenId }])).values()];
+  for (let i = 0; i < nftKeys.length; i += CHUNK) {
+    const keys = nftKeys.slice(i, i + CHUNK);
+    const remaining = await TokenTransfer.aggregate([{ $match: { $or: keys } }, { $group: { _id: { token: '$token', tokenId: '$tokenId' } } }]);
+    const canonical = new Set(remaining.map((r) => `${r._id.token}:${r._id.tokenId}`));
+    const absent = keys.filter((k) => !canonical.has(`${k.token}:${k.tokenId}`));
+    if (absent.length) await NftInstance.deleteMany({ $or: absent });
+  }
   await NftInstance.updateMany({ lastSeq: { $gt: ancestor * 1e6 + 999_999 } }, { $set: { lastSeq: -1 } });
   return orphanTransfers;
 }

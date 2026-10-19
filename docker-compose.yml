@@ -1,6 +1,13 @@
-# Full stack: MongoDB + indexer worker + web server.
+# Full stack: MongoDB + indexer + verification worker + web server.
 #   cp .env.example .env   # set ETHEREUM_RPC_URL (and START_BLOCK)
 #   docker compose up -d --build
+x-explorer-build: &explorer-build
+  context: .
+  args:
+    NEXT_PUBLIC_CHAIN_NAME: ${NEXT_PUBLIC_CHAIN_NAME:-Ethereum}
+    NEXT_PUBLIC_NATIVE_SYMBOL: ${NEXT_PUBLIC_NATIVE_SYMBOL:-ETH}
+    NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://localhost:3000}
+
 services:
   mongo:
     image: mongo:8.0
@@ -14,7 +21,7 @@ services:
       retries: 10
 
   migrate:
-    build: .
+    build: *explorer-build
     command: ["node", "scripts/create-indexes.js"]
     env_file: .env
     environment:
@@ -25,7 +32,7 @@ services:
     restart: "no"
 
   indexer:
-    build: .
+    build: *explorer-build
     command: ["node", "scripts/sync.js"]
     env_file: .env
     environment:
@@ -38,7 +45,7 @@ services:
       disable: true
 
   web:
-    build: .
+    build: *explorer-build
     env_file: .env
     environment:
       MONGODB_URI: mongodb://mongo:27017/explorer
@@ -50,6 +57,21 @@ services:
       migrate:
         condition: service_completed_successfully
     restart: unless-stopped
+
+  verifier:
+    build: *explorer-build
+    command: ["node", "scripts/verify-worker.js"]
+    env_file: .env
+    environment:
+      MONGODB_URI: mongodb://mongo:27017/explorer
+    volumes:
+      - solc-cache:/app/.solc-cache
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    healthcheck:
+      disable: true
 
 volumes:
   mongo-data:

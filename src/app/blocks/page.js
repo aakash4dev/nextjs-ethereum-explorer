@@ -4,7 +4,7 @@ import { Card, Container, EmptyState, PageHeader, Pagination, Progress, Table, T
 import { AddressLink, BlockLink, NativeAmount } from '@/components/links';
 import { listBlocks } from '@/lib/services/blocks';
 import { dbConnect } from '@/lib/db';
-import { formatNumber, gasUsedPercent, formatGwei } from '@/lib/format';
+import { formatNumber, gasUsedPercent, formatGasPrice } from '@/lib/format';
 import { parsePagination } from '@/lib/validation';
 
 export const dynamic = 'force-dynamic';
@@ -45,7 +45,7 @@ export default async function BlocksPage({ searchParams }) {
                       <div className="mt-1 w-24"><Progress value={pct} /></div>
                     </Td>
                     <Td>{formatNumber(b.gasLimit)}</Td>
-                    <Td>{b.baseFeePerGas ? `${formatGwei(b.baseFeePerGas, 2)} Gwei` : '-'}</Td>
+                    <Td>{b.baseFeePerGas ? `${formatGasPrice(b.baseFeePerGas)} Gwei` : '-'}</Td>
                     <Td align="right"><NativeAmount wei={b.priorityFees} maxFraction={5} /></Td>
                     <Td align="right"><NativeAmount wei={b.burntFees} maxFraction={5} /></Td>
                   </tr>

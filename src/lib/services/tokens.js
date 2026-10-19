@@ -57,7 +57,10 @@ export async function getTokenHolders(token, { page = 1, limit = 25 } = {}) {
       { $limit: limit },
     ]);
     const meta = await addressMeta(rows.map((r) => r._id));
-    return { token: info, holders: rows.map((r) => ({ holder: r._id, balance: String(r.balanceNum), distinctIds: r.ids, meta: meta[r._id] ?? null })), pagination: paginate(info.holdersCount, page, limit) };
+    const balances = await TokenBalance.find({ token, holder: { $in: rows.map((r) => r._id) } }).select({ holder: 1, balance: 1 }).lean();
+    const exact = new Map();
+    for (const b of balances) exact.set(b.holder, (exact.get(b.holder) ?? 0n) + BigInt(b.balance));
+    return { token: info, holders: rows.map((r) => ({ holder: r._id, balance: (exact.get(r._id) ?? 0n).toString(), distinctIds: r.ids, meta: meta[r._id] ?? null })), pagination: paginate(info.holdersCount, page, limit) };
   }
   const rows = await TokenBalance.find({ token }).sort({ balanceNum: -1 }).skip((page - 1) * limit).limit(limit).select(NO_ID).lean();
   const supply = info.totalSupply ? BigInt(info.totalSupply) : 0n;

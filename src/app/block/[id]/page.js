@@ -50,7 +50,7 @@ export default async function BlockPage({ params, searchParams }) {
       </Container>
     );
   }
-  const { block: b, confirmations, navigation, source } = data;
+  const { block: b, confirmations, navigation, source, finality } = data;
   const pct = gasUsedPercent(b.gasUsed, b.gasLimit);
   const target = b.gasLimit / 2;
   const vsTarget = target ? ((b.gasUsed - target) / target) * 100 : 0;
@@ -82,8 +82,8 @@ export default async function BlockPage({ params, searchParams }) {
               {navigation.next !== null && <Link href={`/block/${navigation.next}`} className="rounded border border-line p-1 text-primary" aria-label="Next block"><FaChevronRight className="h-3 w-3" /></Link>}
             </span>
           </DetailRow>
-          <DetailRow label="Status" hint="Blocks become safe/finalized after enough confirmations.">
-            {confirmations !== null && confirmations > 64 ? <Badge tone="success">Finalized</Badge> : <Badge tone="warning">Unfinalized</Badge>}
+          <DetailRow label="Status" hint="Safe and finalized status comes from the node's consensus tags, not a fixed confirmation count.">
+            <Badge tone={finality === 'finalized' || finality === 'safe' ? 'success' : 'warning'}>{finality === 'unknown' ? 'Finality unavailable' : finality}</Badge>
             {confirmations !== null && <span className="ml-2 text-xs text-muted">{formatNumber(confirmations)} block confirmations</span>}
           </DetailRow>
           <DetailRow label="Timestamp" hint="When the block was produced.">

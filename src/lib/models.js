@@ -277,11 +277,15 @@ const verificationJobSchema = new Schema(
     status: { type: String, enum: ['pending', 'pass', 'fail'], default: 'pending' },
     message: String,
     request: Schema.Types.Mixed,
+    leaseOwner: String,
+    leaseExpiresAt: Date,
+    attempts: { type: Number, default: 0 },
     createdAt: { type: Date, default: Date.now, expires: 60 * 60 * 24 * 7 },
     finishedAt: Date,
   },
   opts,
 );
+verificationJobSchema.index({ status: 1, leaseExpiresAt: 1, createdAt: 1 });
 
 const signatureSchema = new Schema(
   {
